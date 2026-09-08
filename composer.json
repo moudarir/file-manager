@@ -26,6 +26,7 @@
   },
   "require": {
     "php": ">=8.4",
+    "ext-gd": "*",
     "moudarir/file": "^1.0",
     "moudarir/helpers": "^1.3"
   },

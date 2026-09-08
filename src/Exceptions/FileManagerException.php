@@ -10,9 +10,13 @@ use Throwable;
 class FileManagerException extends Exception
 {
 
-    public static function missingConfig(): self
+    public static function missingConfig(?string $module = null): self
     {
-        return new self("Configuration is mandatory.");
+        if ($module === null) {
+            return new self("Configuration is mandatory.");
+        }
+
+        return new self(sprintf("The configuration of `%s` module is missing.", $module));
     }
 
     public static function missingParam(string $param): self
@@ -96,5 +100,20 @@ class FileManagerException extends Exception
     public static function generic(string $message, ?Throwable $previous = null): self
     {
         return new self($message, previous: $previous);
+    }
+
+    public static function unableReadPictureSource(): static
+    {
+        return new static("Unable to read the image source.");
+    }
+
+    public static function errorCroppingImage(): static
+    {
+        return new static("Error occurred while cropping the image.");
+    }
+
+    public static function errorSavingImage(): static
+    {
+        return new static("Error occurred while saving the image.");
     }
 }

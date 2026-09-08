@@ -77,7 +77,8 @@ final readonly class FileUploader
                 $destinationFile->resource(),
                 $mimeType,
                 $file['name'],
-                $date->format('Y-m-d H:i:s'),
+                $date,
+                $destinationFile->resource()->filesize(),
                 $dimensions,
             );
         } catch (FileResourceException|MimeDetectionException $exception) {
@@ -304,7 +305,7 @@ final readonly class FileUploader
     {
         $directory = rtrim($this->config->uploadPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
-        if ($this->config->dateFormat !== null) {
+        if ($this->config->dateFormat !== null && $this->config->dateFormat !== '') {
             $directory .= $date->format(
                 rtrim($this->config->dateFormat, DIRECTORY_SEPARATOR)
             ) . DIRECTORY_SEPARATOR;

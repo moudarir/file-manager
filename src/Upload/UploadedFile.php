@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Moudarir\FileManager\Upload;
 
+use DateTimeImmutable;
 use Moudarir\File\Enum\MimeType;
 use Moudarir\File\FileResource;
 
@@ -11,12 +12,13 @@ final class UploadedFile
 {
 
     private function __construct(
-        private readonly FileResource $fileResource,
-        private readonly MimeType     $mimeType,
-        private readonly string       $originalName,
-        private readonly string       $createdAt,
-        private readonly ?array       $imageDimensions = null,
-        private bool                  $converted = false,
+        private readonly FileResource      $fileResource,
+        private readonly MimeType          $mimeType,
+        private readonly string            $originalName,
+        private readonly DateTimeImmutable $createdAt,
+        private int                        $filesize,
+        private ?array                     $imageDimensions = null,
+        private bool                       $converted = false,
     ) {
     }
 
@@ -24,7 +26,8 @@ final class UploadedFile
         FileResource $fileResource,
         MimeType     $mimeType,
         string       $originalName,
-        string       $createdAt,
+        DateTimeImmutable $createdAt,
+        int          $filesize,
         ?array       $imageDimensions = null,
     ): self
     {
@@ -33,6 +36,7 @@ final class UploadedFile
             $mimeType,
             $originalName,
             $createdAt,
+            $filesize,
             $imageDimensions,
         );
     }
@@ -54,7 +58,13 @@ final class UploadedFile
 
     public function filesize(): int
     {
-        return $this->fileResource->filesize();
+        return $this->filesize;
+    }
+
+    public function changeFilesize(int $filesize): self
+    {
+        $this->filesize = $filesize;
+        return $this;
     }
 
     public function filename(): string
@@ -102,7 +112,13 @@ final class UploadedFile
         return $this->imageDimensions['height'] ?? null;
     }
 
-    public function createdAt(): string
+    public function changeImageDimensions(array $newDimensions): self
+    {
+        $this->imageDimensions = $newDimensions;
+        return $this;
+    }
+
+    public function createdAt(): DateTimeImmutable
     {
         return $this->createdAt;
     }
@@ -112,8 +128,9 @@ final class UploadedFile
         return $this->converted;
     }
 
-    public function markAsConverted(): void
+    public function markAsConverted(): self
     {
         $this->converted = true;
+        return $this;
     }
 }

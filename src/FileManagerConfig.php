@@ -17,7 +17,7 @@ final class FileManagerConfig
     private const array DEFAULT_UPLOAD_CONFIG = [
         'field' => '',
         'uploadPath' => '',
-        'dateFormat' => '',
+        'dateFormat' => null,
         'maxFilesize' => 0,
         'maxImageWidth' => 0,
         'maxImageHeight' => 0,
@@ -30,7 +30,8 @@ final class FileManagerConfig
     ];
 
     private const array DEFAULT_CROP_CONFIG = [
-        // Default Image cropping params
+        'cropRatioWidth' => 400,
+        'cropRatioHeight' => 400,
     ];
 
     private ?ImageCropConfig $imageCropConfig = null;

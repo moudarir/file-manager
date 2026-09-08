@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Moudarir\FileManager\Tests\Unit\Upload;
 
+use DateTimeImmutable;
 use Moudarir\File\Enum\MimeType;
 use Moudarir\File\File;
 use Moudarir\FileManager\Upload\UploadedFile;
@@ -15,18 +16,22 @@ final class UploadedFileCollectionTest extends TestCase
 
     public function testCollectionExposesFieldAndFiles(): void
     {
+        $fileResource1 = File::create(__FILE__)->resource();
         $file1 = UploadedFile::create(
-            File::create(__FILE__)->resource(),
+            $fileResource1,
             MimeType::PHP,
             'file1.php',
-            '2026-09-08 00:00:00',
+            new DateTimeImmutable(),
+            $fileResource1->filesize(),
         );
 
+        $fileResource2 = File::create(__FILE__)->resource();
         $file2 = UploadedFile::create(
-            File::create(__FILE__)->resource(),
+            $fileResource2,
             MimeType::PHP,
             'file2.php',
-            '2026-09-08 00:00:00',
+            new DateTimeImmutable(),
+            $fileResource2->filesize(),
         );
 
         $collection = new UploadedFileCollection('documents', [$file1, $file2]);
@@ -49,18 +54,22 @@ final class UploadedFileCollectionTest extends TestCase
 
     public function testCollectionCanBeIterated(): void
     {
+        $fileResource1 = File::create(__FILE__)->resource();
         $file1 = UploadedFile::create(
-            File::create(__FILE__)->resource(),
+            $fileResource1,
             MimeType::PHP,
             'file1.php',
-            '2026-09-08 00:00:00',
+            new DateTimeImmutable(),
+            $fileResource1->filesize(),
         );
 
+        $fileResource2 = File::create(__FILE__)->resource();
         $file2 = UploadedFile::create(
-            File::create(__FILE__)->resource(),
+            $fileResource2,
             MimeType::PHP,
             'file2.php',
-            '2026-09-08 00:00:00',
+            new DateTimeImmutable(),
+            $fileResource2->filesize(),
         );
 
         $collection = new UploadedFileCollection('documents', [$file1, $file2]);

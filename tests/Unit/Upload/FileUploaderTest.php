@@ -822,7 +822,8 @@ final class FileUploaderTest extends TestCase
             );
             self::assertSame([1, 1], [$file->imageWidth(), $file->imageHeight()]);
 
-            self::assertNotSame('', $file->createdAt());
+            self::assertInstanceOf(DateTimeImmutable::class, $file->createdAt());
+            //self::assertNotSame('', $file->createdAt());
             self::assertFalse($file->converted());
         } finally {
             self::assertTrue(unlink($filepath));
@@ -853,7 +854,8 @@ final class FileUploaderTest extends TestCase
             $fileResource,
             MimeType::PNG,
             'image.png',
-            '2026-09-08 00:00:00',
+            new DateTimeImmutable(),
+            $fileResource->filesize(),
             [
                 'width' => 1,
                 'height' => 1,
