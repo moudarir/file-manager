@@ -37,7 +37,11 @@ final class FileManagerConfig
     private ?ImageCropConfig $imageCropConfig = null;
 
     private const array DEFAULT_RESIZE_CONFIG = [
-        // Default Image resize params
+        'resizePath' => '',
+        'dateFormat' => null,
+        'thumbs' => [],
+        'quality' => '85',
+        'removeAfterResize' => false,
     ];
 
     private ?ImageResizeConfig $imageResizeConfig = null;
@@ -47,10 +51,6 @@ final class FileManagerConfig
     ];
 
     private ?ImageConvertConfig $imageConvertConfig = null;
-
-    private const array DEFAULT_WATERMARK_CONFIG = [
-        // Default Image watermark params
-    ];
 
     private ?ImageWatermarkConfig $imageWatermarkConfig = null;
 
@@ -97,11 +97,26 @@ final class FileManagerConfig
         );
     }
 
+    /**
+     * @throws FileManagerException
+     */
     public function imageResizeConfig(): ImageResizeConfig
     {
-        return $this->imageResizeConfig ??= ImageResizeConfig::create(
-            self::prepareConfig(self::DEFAULT_RESIZE_CONFIG, $this->providedConfig)
-        );
+        if (!function_exists('getimagesize')) {
+            throw FileManagerException::gdLibRequired();
+        }
+
+        $config = self::prepareConfig(self::DEFAULT_RESIZE_CONFIG, $this->providedConfig);
+
+        if (trim($config['resizePath']) === '') {
+            throw FileManagerException::missingParam('resizePath');
+        }
+
+        if (isset($config['thumbs']['large']['width'], $config['thumbs']['large']['height']) === false) {
+            throw FileManagerException::missingParam('thumbs.large');
+        }
+
+        return $this->imageResizeConfig ??= ImageResizeConfig::create($config);
     }
 
     public function imageConvertConfig(): ImageConvertConfig
@@ -111,10 +126,30 @@ final class FileManagerConfig
         );
     }
 
+    /**
+     * @throws FileManagerException
+     */
     public function imageWatermarkConfig(): ImageWatermarkConfig
     {
+        if (!function_exists('getimagesize')) {
+            throw FileManagerException::gdLibRequired();
+        }
+
+        if (
+            array_key_exists('watermarks', $this->providedConfig) === false ||
+            is_array($this->providedConfig['watermarks']) === false ||
+            $this->providedConfig['watermarks'] === []
+        ) {
+            throw FileManagerException::missingParam('watermarks');
+        }
+
         return $this->imageWatermarkConfig ??= ImageWatermarkConfig::create(
-            self::prepareConfig(self::DEFAULT_WATERMARK_CONFIG, $this->providedConfig)
+            [
+                'resizePath' => $this->imageResizeConfig->resizePath,
+                'dateFormat' => $this->imageResizeConfig->dateFormat,
+                'thumbs' => $this->imageResizeConfig->thumbs,
+                'watermarks' => $this->providedConfig['watermarks'],
+            ]
         );
     }
 

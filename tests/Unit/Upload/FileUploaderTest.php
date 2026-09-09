@@ -848,14 +848,11 @@ final class FileUploaderTest extends TestCase
 
         file_put_contents($filepath, $sourceContent);
 
-        $fileResource = File::create($filepath)->resource();
-
         $file = UploadedFile::create(
-            $fileResource,
+            File::create($filepath)->resource(),
             MimeType::PNG,
             'image.png',
             new DateTimeImmutable(),
-            $fileResource->filesize(),
             [
                 'width' => 1,
                 'height' => 1,

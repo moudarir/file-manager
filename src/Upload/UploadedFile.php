@@ -12,11 +12,15 @@ final class UploadedFile
 {
 
     private function __construct(
-        private readonly FileResource      $fileResource,
-        private readonly MimeType          $mimeType,
         private readonly string            $originalName,
         private readonly DateTimeImmutable $createdAt,
+        private string                     $dirname,
+        private string                     $filepath,
+        private string                     $basename,
+        private string                     $filename,
+        private string                     $extension,
         private int                        $filesize,
+        private MimeType                   $mimeType,
         private ?array                     $imageDimensions = null,
         private bool                       $converted = false,
     ) {
@@ -27,16 +31,19 @@ final class UploadedFile
         MimeType     $mimeType,
         string       $originalName,
         DateTimeImmutable $createdAt,
-        int          $filesize,
         ?array       $imageDimensions = null,
     ): self
     {
         return new self(
-            $fileResource,
-            $mimeType,
             $originalName,
             $createdAt,
-            $filesize,
+            $fileResource->dirname(),
+            $fileResource->filepath(),
+            $fileResource->basename(),
+            $fileResource->filename(),
+            $fileResource->extension(),
+            $fileResource->filesize(),
+            $mimeType,
             $imageDimensions,
         );
     }
@@ -46,14 +53,69 @@ final class UploadedFile
         return $this->originalName;
     }
 
+    public function createdAt(): DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
     public function dirname(): string
     {
-        return $this->fileResource->dirname();
+        return $this->dirname;
+    }
+
+    public function changeDirname(string $value): self
+    {
+        $this->dirname = $value;
+
+        return $this;
     }
 
     public function filepath(): string
     {
-        return $this->fileResource->filepath();
+        return $this->filepath;
+    }
+
+    public function changeFilepath(string $value): self
+    {
+        $this->filepath = $value;
+
+        return $this;
+    }
+
+    public function basename(): string
+    {
+        return $this->basename;
+    }
+
+    public function changeBasename(string $value): self
+    {
+        $this->basename = $value;
+
+        return $this;
+    }
+
+    public function filename(): string
+    {
+        return $this->filename;
+    }
+
+    public function changeFilename(string $value): self
+    {
+        $this->filename = $value;
+
+        return $this;
+    }
+
+    public function extension(): string
+    {
+        return $this->extension;
+    }
+
+    public function changeExtension(string $value): self
+    {
+        $this->extension = $value;
+
+        return $this;
     }
 
     public function filesize(): int
@@ -61,25 +123,10 @@ final class UploadedFile
         return $this->filesize;
     }
 
-    public function changeFilesize(int $filesize): self
+    public function changeFilesize(int $value): self
     {
-        $this->filesize = $filesize;
+        $this->filesize = $value;
         return $this;
-    }
-
-    public function filename(): string
-    {
-        return $this->fileResource->filename();
-    }
-
-    public function basename(): string
-    {
-        return $this->fileResource->basename();
-    }
-
-    public function extension(): string
-    {
-        return $this->fileResource->extension();
     }
 
     public function mimeType(): MimeType
@@ -95,6 +142,12 @@ final class UploadedFile
     public function isImage(): bool
     {
         return $this->mimeType->isImage();
+    }
+
+    public function changeMimeType(MimeType $value): self
+    {
+        $this->mimeType = $value;
+        return $this;
     }
 
     public function imageDimensions(): ?array
@@ -116,11 +169,6 @@ final class UploadedFile
     {
         $this->imageDimensions = $newDimensions;
         return $this;
-    }
-
-    public function createdAt(): DateTimeImmutable
-    {
-        return $this->createdAt;
     }
 
     public function converted(): bool

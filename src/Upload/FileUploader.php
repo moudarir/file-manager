@@ -10,7 +10,7 @@ use Moudarir\File\Exceptions\FileResourceException;
 use Moudarir\File\Exceptions\MimeDetectionException;
 use Moudarir\File\File;
 use Moudarir\FileManager\Exceptions\FileManagerException;
-use Moudarir\Helpers\DirectoryHelper;
+use Moudarir\FileManager\Helpers\Common;
 use Moudarir\Helpers\EncryptionHelper;
 use Moudarir\Helpers\FileHelper;
 use Moudarir\Helpers\SanitizeHelper;
@@ -50,7 +50,7 @@ final readonly class FileUploader
             $this->validateFileSource($file);
 
             $date = new DateTimeImmutable();
-            $directory = $this->getDestinationDirectory($date);
+            $directory = Common::makeDirectory($this->config->uploadPath, $date, $this->config->dateFormat);
             $filename = $this->getDestinationFilename($file['name']);
 
             $sourceFile = File::create($file['tmp_name']);
@@ -58,8 +58,11 @@ final readonly class FileUploader
             $detection = $sourceFile->detection();
             $mimeType = $detection->mimeType();
 
-            $extension = $resource->extension() !== '' ? '.'.$resource->extension() : '';
-            $basename = $this->getDestinationBasename($directory, $filename, $extension);
+            $basename = $this->getDestinationBasename(
+                $directory,
+                $filename,
+                $resource->extension()
+            );
 
             if ($this->isAllowedMimeType($mimeType) === false) {
                 throw FileManagerException::invalidFiletype();
@@ -78,7 +81,6 @@ final readonly class FileUploader
                 $mimeType,
                 $file['name'],
                 $date,
-                $destinationFile->resource()->filesize(),
                 $dimensions,
             );
         } catch (FileResourceException|MimeDetectionException $exception) {
@@ -301,36 +303,12 @@ final readonly class FileUploader
     /**
      * @throws FileManagerException
      */
-    private function getDestinationDirectory(DateTimeImmutable $date): string
-    {
-        $directory = rtrim($this->config->uploadPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-
-        if ($this->config->dateFormat !== null && $this->config->dateFormat !== '') {
-            $directory .= $date->format(
-                rtrim($this->config->dateFormat, DIRECTORY_SEPARATOR)
-            ) . DIRECTORY_SEPARATOR;
-        }
-
-        if (DirectoryHelper::create($directory) === false) {
-            throw FileManagerException::unableCreateFilepath();
-        }
-
-        if (!is_dir($directory)) {
-            throw FileManagerException::invalidDestinationPath();
-        }
-
-        return $directory;
-    }
-
-    /**
-     * @throws FileManagerException
-     */
     private function getDestinationFilename(string $basename): string
     {
         if ($this->config->encryptName === false) {
-            $x = explode('.', $basename);
-            $extension = count($x) === 1 ? '' : '.' . strtolower(end($x));
-            $filename = substr($basename, 0, -strlen($extension));
+            if (($filename = pathinfo($basename, PATHINFO_FILENAME)) === '') {
+                return '';
+            }
 
             return SanitizeHelper::urlTitle($filename);
         }
@@ -347,7 +325,7 @@ final readonly class FileUploader
      */
     private function getDestinationBasename(string $directory, string $filename, string $extension): string
     {
-        $basename = $filename . $extension;
+        $basename = $filename . ($extension !== '' ? '.'.$extension : '');
 
         if ($this->config->overwrite === true || is_file($directory . $basename) === false) {
             return $basename;

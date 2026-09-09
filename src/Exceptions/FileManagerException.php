@@ -10,6 +10,11 @@ use Throwable;
 class FileManagerException extends Exception
 {
 
+    public static function uploadRequestMandatory(): self
+    {
+        return new self("The `upload()` method is mandatory to perform...");
+    }
+
     public static function missingConfig(?string $module = null): self
     {
         if ($module === null) {
@@ -97,23 +102,75 @@ class FileManagerException extends Exception
         return new self("The destination path appears to be invalid.");
     }
 
+    public static function invalidPropertyValue(string $property): static
+    {
+        return new static("The value of the property `$property` is invalid.");
+    }
+
+    public static function unableReadPictureSource(): self
+    {
+        return new self("Unable to read the image source.");
+    }
+
+    public static function errorCroppingImage(): self
+    {
+        return new self("Error occurred while cropping the image.");
+    }
+
+    public static function errorSavingImage(): self
+    {
+        return new self("Error occurred while saving the image.");
+    }
+
+    public static function invalidImageMagickExecutablePath(): self
+    {
+        return new self("The path to the `ImageMagick` library is invalid.");
+    }
+
+    public static function imageResizeFailed(): self
+    {
+        return new self("Image resizing failed. Please make sure that your server supports the `command-line` execution.");
+    }
+
+    public static function fileNotExists(string $filepath): self
+    {
+        return new self(sprintf("The file `%s` does not exist.", $filepath));
+    }
+
+    public static function gdLibRequired(): self
+    {
+        return new self("Your server must support the GD image library in order to determine the image properties.");
+    }
+
+    public static function invalidImage(): self
+    {
+        return new self("The provided image is invalid.");
+    }
+
+    public static function unsupportedImageType(string $type): self
+    {
+        return new self(sprintf("Images of type `%s` are not supported.", $type));
+    }
+
+    public static function unsupportedImageCreate(?string $type = null): self
+    {
+        $message = "Your server does not support the GD functions required to process this type of image.";
+
+        if ($type !== null) {
+            $type = strtoupper($type);
+            $message .= " Images of type `$type` are not supported.";
+        }
+
+        return new self($message);
+    }
+
+    public static function failToSaveImage(): self
+    {
+        return new self("Unable to save the image. Please ensure that the image and the directory are writable.");
+    }
+
     public static function generic(string $message, ?Throwable $previous = null): self
     {
         return new self($message, previous: $previous);
-    }
-
-    public static function unableReadPictureSource(): static
-    {
-        return new static("Unable to read the image source.");
-    }
-
-    public static function errorCroppingImage(): static
-    {
-        return new static("Error occurred while cropping the image.");
-    }
-
-    public static function errorSavingImage(): static
-    {
-        return new static("Error occurred while saving the image.");
     }
 }

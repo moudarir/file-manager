@@ -117,13 +117,11 @@ final class ImageCropperTest extends TestCase
             file_put_contents($filepath, 'This is not an image.')
         );
 
-        $fileResource = File::create($filepath)->resource();
         $file = UploadedFile::create(
-            $fileResource,
+            File::create($filepath)->resource(),
             MimeType::PDF,
             'document.pdf',
             new DateTimeImmutable(),
-            $fileResource->filesize(),
         );
 
         $collection = new UploadedFileCollection('file', [$file]);
@@ -361,14 +359,11 @@ final class ImageCropperTest extends TestCase
         int $width,
         int $height,
     ): UploadedFile {
-        $fileResource = File::create($filepath)->resource();
-
         return UploadedFile::create(
-            $fileResource,
+            File::create($filepath)->resource(),
             $mimeType,
             basename($filepath),
             new DateTimeImmutable(),
-            $fileResource->filesize(),
             [
                 'width' => $width,
                 'height' => $height,

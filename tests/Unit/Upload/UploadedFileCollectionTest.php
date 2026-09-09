@@ -16,22 +16,18 @@ final class UploadedFileCollectionTest extends TestCase
 
     public function testCollectionExposesFieldAndFiles(): void
     {
-        $fileResource1 = File::create(__FILE__)->resource();
         $file1 = UploadedFile::create(
-            $fileResource1,
+            File::create(__FILE__)->resource(),
             MimeType::PHP,
             'file1.php',
             new DateTimeImmutable(),
-            $fileResource1->filesize(),
         );
 
-        $fileResource2 = File::create(__FILE__)->resource();
         $file2 = UploadedFile::create(
-            $fileResource2,
+            File::create(__FILE__)->resource(),
             MimeType::PHP,
             'file2.php',
             new DateTimeImmutable(),
-            $fileResource2->filesize(),
         );
 
         $collection = new UploadedFileCollection('documents', [$file1, $file2]);
@@ -54,22 +50,18 @@ final class UploadedFileCollectionTest extends TestCase
 
     public function testCollectionCanBeIterated(): void
     {
-        $fileResource1 = File::create(__FILE__)->resource();
         $file1 = UploadedFile::create(
-            $fileResource1,
+            File::create(__FILE__)->resource(),
             MimeType::PHP,
             'file1.php',
             new DateTimeImmutable(),
-            $fileResource1->filesize(),
         );
 
-        $fileResource2 = File::create(__FILE__)->resource();
         $file2 = UploadedFile::create(
-            $fileResource2,
+            File::create(__FILE__)->resource(),
             MimeType::PHP,
             'file2.php',
             new DateTimeImmutable(),
-            $fileResource2->filesize(),
         );
 
         $collection = new UploadedFileCollection('documents', [$file1, $file2]);
