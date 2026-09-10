@@ -50,19 +50,16 @@ final readonly class FileUploader
             $this->validateFileSource($file);
 
             $date = new DateTimeImmutable();
-            $directory = Common::makeDirectory($this->config->uploadPath, $date, $this->config->dateFormat);
-            $filename = $this->getDestinationFilename($file['name']);
+            $directory = Common::makeDirectory(
+                $this->config->uploadPath,
+                $date,
+                $this->config->dateFormat
+            );
+
+            $basename = $this->getDestinationBasename($directory, $file['name']);
 
             $sourceFile = File::create($file['tmp_name']);
-            $resource = $sourceFile->resource();
-            $detection = $sourceFile->detection();
-            $mimeType = $detection->mimeType();
-
-            $basename = $this->getDestinationBasename(
-                $directory,
-                $filename,
-                $resource->extension()
-            );
+            $mimeType = $sourceFile->detection()->mimeType();
 
             if ($this->isAllowedMimeType($mimeType) === false) {
                 throw FileManagerException::invalidFiletype();
@@ -303,28 +300,33 @@ final readonly class FileUploader
     /**
      * @throws FileManagerException
      */
-    private function getDestinationFilename(string $basename): string
+    private function getDestinationInfo(string $basename): array
     {
+        $info = pathinfo($basename);
+        $filename = $info['filename'];
+        $extension = $info['extension'] ?? '';
+
         if ($this->config->encryptName === false) {
-            if (($filename = pathinfo($basename, PATHINFO_FILENAME)) === '') {
-                return '';
+            if ($filename !== '') {
+                $filename = SanitizeHelper::urlTitle($filename);
             }
-
-            return SanitizeHelper::urlTitle($filename);
+        } else {
+            try {
+                $filename = EncryptionHelper::generateToken(40);
+            } catch (RandomException $exception) {
+                throw FileManagerException::generic($exception->getMessage(), $exception);
+            }
         }
 
-        try {
-            return EncryptionHelper::generateToken(40);
-        } catch (RandomException $exception) {
-            throw FileManagerException::generic($exception->getMessage(), $exception);
-        }
+        return [$filename, $extension];
     }
 
     /**
      * @throws FileManagerException
      */
-    private function getDestinationBasename(string $directory, string $filename, string $extension): string
+    private function getDestinationBasename(string $directory, string $originalBasename): string
     {
+        [$filename, $extension] = $this->getDestinationInfo($originalBasename);
         $basename = $filename . ($extension !== '' ? '.'.$extension : '');
 
         if ($this->config->overwrite === true || is_file($directory . $basename) === false) {

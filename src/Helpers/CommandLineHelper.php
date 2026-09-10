@@ -11,8 +11,6 @@ final class CommandLineHelper
 
     private static ?string $imageMagickExecutablePath = null;
 
-    private static ?string $executableSearchCommand = null;
-
     private static ?string $nicePrefix = null;
 
     /**
@@ -75,17 +73,16 @@ final class CommandLineHelper
      */
     public static function executablePath(string $executable, ?string $fallback = null): string
     {
-        $searchCommand = self::executableSearchCommand();
-        $path = trim((string)shell_exec($searchCommand.$executable));
+        $path = self::findExecutable($executable);
 
-        if ($path !== '' && is_executable($path) === true) {
+        if ($path !== null) {
             return $path;
         }
 
         if ($fallback !== null && $fallback !== '') {
-            $path = trim((string)shell_exec($searchCommand.$fallback));
+            $path = self::findExecutable($fallback);
 
-            if ($path !== '' && is_executable($path) === true) {
+            if ($path !== null) {
                 return $path;
             }
         }
@@ -101,13 +98,71 @@ final class CommandLineHelper
         return self::$imageMagickExecutablePath ??= self::executablePath('convert', 'magick');
     }
 
-    private static function executableSearchCommand(): string
-    {
-        return self::$executableSearchCommand ??= (PHP_OS_FAMILY === 'Windows' ? 'where ' : 'command -v ');
-    }
-
     private static function nicePrefix(): string
     {
         return self::$nicePrefix ??= (PHP_OS_FAMILY === 'Windows' ? '' : 'nice ');
+    }
+
+    private static function findExecutable(string $executable): ?string
+    {
+        foreach (self::executableDirectories() as $directory) {
+            $path = $directory.DIRECTORY_SEPARATOR.$executable;
+
+            if (is_executable($path) === true) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function executableDirectories(): array
+    {
+        $directories = [];
+
+        $path = getenv('PATH');
+
+        if ($path !== false && $path !== '') {
+            $directories = explode(PATH_SEPARATOR, $path);
+        }
+
+        $directories = array_merge(
+            $directories,
+            self::defaultExecutableDirectories()
+        );
+
+        return array_values(
+            array_unique(
+                array_filter(
+                    $directories,
+                    static fn (string $directory): bool => $directory !== ''
+                )
+            )
+        );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function defaultExecutableDirectories(): array
+    {
+        return match (PHP_OS_FAMILY) {
+            'Darwin' => [
+                '/opt/homebrew/bin',
+                '/usr/local/bin',
+                '/opt/local/bin',
+            ],
+            'Linux' => [
+                '/usr/local/bin',
+                '/usr/bin',
+                '/bin',
+                '/snap/bin',
+            ],
+            //'Windows' => [],
+            default => [],
+        };
     }
 }

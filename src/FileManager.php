@@ -45,16 +45,16 @@ final class FileManager
         $collection = new FileUploader($this->config->uploadConfig())
             ->upload($this->filepath);
 
+        if ($collection->isEmpty()) {
+            return $collection;
+        }
+
         if ($this->cropRequested === true && empty($this->croppingConfig) === false) {
             ImageCropper::create(
                 $collection,
                 $this->config->imageCropConfig(),
                 $this->croppingConfig
             )->crop();
-        }
-
-        if ($collection->isEmpty()) {
-            return $collection;
         }
 
         if ($this->resizeRequested === true) {

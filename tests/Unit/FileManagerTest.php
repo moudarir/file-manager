@@ -46,7 +46,6 @@ final class FileManagerTest extends TestCase
     public function itReturnsItselfForFluentMethods(): void
     {
         $manager = $this->createFileManager();
-        var_dump($this->croppingConfig());
 
         self::assertSame($manager, $manager->upload());
         self::assertSame($manager, $manager->crop($this->croppingConfig()));
