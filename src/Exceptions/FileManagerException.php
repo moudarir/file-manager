@@ -12,7 +12,7 @@ class FileManagerException extends Exception
 
     public static function uploadRequestMandatory(): self
     {
-        return new self("The `upload()` method is mandatory to perform...");
+        return new self("The `upload()` method is mandatory before calling `files()`.");
     }
 
     public static function missingConfig(?string $module = null): self

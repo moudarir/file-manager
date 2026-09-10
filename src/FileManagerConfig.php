@@ -124,8 +124,8 @@ final class FileManagerConfig
             'thumbs' => [],
         ];
 
-        if ($this->imageResizeConfig !== null && isset($this->imageResizeConfig['thumbs']['large']) === true) {
-            $config['thumbs'] = array_keys($this->imageResizeConfig['thumbs']);
+        if ($this->imageResizeConfig !== null && isset($this->imageResizeConfig->thumbs['large']) === true) {
+            $config['thumbs'] = array_keys($this->imageResizeConfig->thumbs);
         }
 
         return $this->imageConvertConfig ??= ImageConvertConfig::create($config);
