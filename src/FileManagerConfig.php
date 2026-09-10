@@ -46,10 +46,6 @@ final class FileManagerConfig
 
     private ?ImageResizeConfig $imageResizeConfig = null;
 
-    private const array DEFAULT_CONVERT_CONFIG = [
-        // Default Image convert params
-    ];
-
     private ?ImageConvertConfig $imageConvertConfig = null;
 
     private ?ImageWatermarkConfig $imageWatermarkConfig = null;
@@ -121,9 +117,18 @@ final class FileManagerConfig
 
     public function imageConvertConfig(): ImageConvertConfig
     {
-        return $this->imageConvertConfig ??= ImageConvertConfig::create(
-            self::prepareConfig(self::DEFAULT_CONVERT_CONFIG, $this->providedConfig)
-        );
+        $config = [
+            'removeAfterConvert' => (bool)($this->providedConfig['removeAfterConvert'] ?? false),
+            'resizePath' => $this->providedConfig['resizePath'] ?? null,
+            'dateFormat' => $this->providedConfig['dateFormat'] ?? null,
+            'thumbs' => [],
+        ];
+
+        if ($this->imageResizeConfig !== null && isset($this->imageResizeConfig['thumbs']['large']) === true) {
+            $config['thumbs'] = array_keys($this->imageResizeConfig['thumbs']);
+        }
+
+        return $this->imageConvertConfig ??= ImageConvertConfig::create($config);
     }
 
     /**

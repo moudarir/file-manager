@@ -122,14 +122,21 @@ class FileManagerException extends Exception
         return new self("Error occurred while saving the image.");
     }
 
-    public static function invalidImageMagickExecutablePath(): self
+    public static function executablePathNotFound(string $executable, ?string $fallback = null): self
     {
-        return new self("The path to the `ImageMagick` library is invalid.");
+        $command = "`$executable`".($fallback === null ? '' : " or `$fallback`");
+        $path = $fallback === null ? 'path is' : "paths are";
+        return new self("The $command executable $path not found.");
     }
 
     public static function imageResizeFailed(): self
     {
         return new self("Image resizing failed. Please make sure that your server supports the `command-line` execution.");
+    }
+
+    public static function imageConvertFailed(): self
+    {
+        return new self("Image conversion failed. Please make sure that your server supports the `command-line` execution.");
     }
 
     public static function fileNotExists(string $filepath): self

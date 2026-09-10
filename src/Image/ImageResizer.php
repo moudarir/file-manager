@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Moudarir\FileManager\Image;
 
 use Moudarir\FileManager\Exceptions\FileManagerException;
+use Moudarir\FileManager\Helpers\CommandLineHelper;
 use Moudarir\FileManager\Helpers\Common;
 use Moudarir\FileManager\Upload\UploadedFile;
 use Moudarir\FileManager\Upload\UploadedFileCollection;
@@ -31,7 +32,7 @@ final readonly class ImageResizer
     {
         $thumbs = $config->thumbs;
         $resizePath = $config->resizePath;
-        $converterPath = Common::imageMagickExecutablePath();
+        //$converterPath = Common::imageMagickExecutablePath();
 
         /**
          * @var UploadedFile $file
@@ -68,7 +69,7 @@ final readonly class ImageResizer
                     $width,
                     $height,
                     $config->quality,
-                )->process($converterPath);
+                )->process();
 
                 if ($thumb === 'large') {
                     $file
@@ -99,26 +100,21 @@ final readonly class ImageResizer
     /**
      * @throws FileManagerException
      */
-    private function process(string $converterPath): void
+    private function process(): void
     {
-        $cmd = rtrim($converterPath, DIRECTORY_SEPARATOR).
-            ' '.escapeshellarg($this->sourceFilepath).
-            ' -quality '.escapeshellarg($this->quality).
-            ' -resize '.$this->width.'x'.$this->height.
-            ' '.escapeshellarg($this->destinationFilepath).
-            ' 2>&1';
-        $returnVal = 1;
+        $command = CommandLineHelper::buildImageMagickCommand(
+            $this->sourceFilepath,
+            $this->destinationFilepath,
+            [
+                '-quality ' . escapeshellarg($this->quality),
+                '-resize ' . $this->width.'x'.$this->height
+            ]
+        );
 
-        // exec() might be disabled
-        if (function_exists('exec')) {
-            exec($cmd, $output, $returnVal);
-        }
-
-        // Did it work?
-        if ($returnVal !== 0) {
+        if (CommandLineHelper::executeCommand($command) === false) {
             throw FileManagerException::imageResizeFailed();
         }
 
-        chmod($this->destinationFilepath, 0644);
+        @chmod($this->destinationFilepath, 0644);
     }
 }

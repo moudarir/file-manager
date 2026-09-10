@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Moudarir\FileManager;
 
 use Moudarir\FileManager\Exceptions\FileManagerException;
+use Moudarir\FileManager\Image\ImageConverter;
 use Moudarir\FileManager\Image\ImageCropper;
 use Moudarir\FileManager\Image\ImageResizer;
 use Moudarir\FileManager\Image\ImageWatermarker;
@@ -65,7 +66,7 @@ final class FileManager
         }
 
         if ($this->convertRequested === true) {
-            // Not yet implemented
+            ImageConverter::create($collection, $this->config->imageConvertConfig());
         }
 
         return $collection;

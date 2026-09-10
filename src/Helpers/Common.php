@@ -55,24 +55,4 @@ final class Common
 
         return $directory;
     }
-
-    /**
-     * @throws FileManagerException
-     */
-    public static function imageMagickExecutablePath(): string
-    {
-        $path = trim((string)shell_exec('command -v magick'));
-
-        if ($path !== '' && is_executable($path) === true) {
-            return $path;
-        }
-
-        $path = trim((string)shell_exec('command -v convert'));
-
-        if ($path !== '' && is_executable($path) === true) {
-            return $path;
-        }
-
-        throw FileManagerException::invalidImageMagickExecutablePath();
-    }
 }

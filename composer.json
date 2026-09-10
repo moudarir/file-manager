@@ -1,6 +1,6 @@
 {
   "name": "moudarir/file-manager",
-  "description": "A PHP library for managing file upload, image resize, cropping, convert and watermark.",
+  "description": "A lightweight, dependency-free PHP file manager with image processing capabilities.",
   "type": "library",
   "homepage": "https://github.com/moudarir/file-manager",
   "license": "MIT",
