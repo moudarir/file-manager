@@ -49,7 +49,9 @@ final readonly class FileUploader
             $this->validateFilesize($file);
             $this->validateFileSource($file);
 
-            $date = new DateTimeImmutable();
+            $date = $this->config->customDate !== null
+                ? $this->config->customDate
+                : new DateTimeImmutable();
             $directory = Common::makeDirectory(
                 $this->config->uploadPath,
                 $date,

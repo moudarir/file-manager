@@ -14,10 +14,12 @@ use Moudarir\FileManager\Upload\UploadConfig;
 final class FileManagerConfig
 {
 
-    private const array DEFAULT_UPLOAD_CONFIG = [
+    private const array DEFAULT_CONFIG = [
+        // Upload params
         'field' => '',
         'uploadPath' => '',
         'dateFormat' => null,
+        'customDate' => null,
         'maxFilesize' => 0,
         'maxImageWidth' => 0,
         'maxImageHeight' => 0,
@@ -27,22 +29,23 @@ final class FileManagerConfig
         'allowedMimeTypes' => [],
         'overwrite' => false,
         'encryptName' => true,
-    ];
-
-    private const array DEFAULT_CROP_CONFIG = [
+        // Cropping params
         'cropRatioWidth' => 400,
         'cropRatioHeight' => 400,
+        // Resize params
+        'resizePath' => '',
+        'thumbs' => [],
+        'resizeQuality' => 85,
+        'removeAfterResize' => false,
+        // Watermark params
+        'watermarks' => [],
+        // Conversion params
+        'removeAfterConvert' => false,
     ];
+
+    private ?UploadConfig $uploadConfig = null;
 
     private ?ImageCropConfig $imageCropConfig = null;
-
-    private const array DEFAULT_RESIZE_CONFIG = [
-        'resizePath' => '',
-        'dateFormat' => null,
-        'thumbs' => [],
-        'quality' => '85',
-        'removeAfterResize' => false,
-    ];
 
     private ?ImageResizeConfig $imageResizeConfig = null;
 
@@ -50,10 +53,8 @@ final class FileManagerConfig
 
     private ?ImageWatermarkConfig $imageWatermarkConfig = null;
 
-    private function __construct(
-        private readonly array        $providedConfig,
-        private readonly UploadConfig $uploadConfig,
-    ) {
+    private function __construct(private readonly array $config, private readonly array $providedConfig)
+    {
     }
 
     /**
@@ -65,32 +66,37 @@ final class FileManagerConfig
             throw FileManagerException::missingConfig();
         }
 
-        if (array_key_exists('field', $config) === false) {
-            throw FileManagerException::missingParam('field');
-        }
-
-        if (array_key_exists('uploadPath', $config) === false) {
-            throw FileManagerException::missingParam('uploadPath');
-        }
-
-        return new self(
-            $config,
-            UploadConfig::create(
-                self::prepareConfig(self::DEFAULT_UPLOAD_CONFIG, $config)
-            ),
-        );
+        return new self(self::prepareConfig($config), $config);
     }
 
+    /**
+     * @throws FileManagerException
+     */
     public function uploadConfig(): UploadConfig
     {
-        return $this->uploadConfig;
+        if (
+            is_string($this->config['field']) === false ||
+            trim($this->config['field']) === ''
+        ) {
+            throw FileManagerException::invalidParam('field');
+        }
+
+        if (
+            is_string($this->config['uploadPath']) === false ||
+            trim($this->config['uploadPath']) === ''
+        ) {
+            throw FileManagerException::invalidParam('uploadPath');
+        }
+
+        return $this->uploadConfig ??= UploadConfig::create($this->config);
     }
 
+    /**
+     * @throws FileManagerException
+     */
     public function imageCropConfig(): ImageCropConfig
     {
-        return $this->imageCropConfig ??= ImageCropConfig::create(
-            self::prepareConfig(self::DEFAULT_CROP_CONFIG, $this->providedConfig)
-        );
+        return $this->imageCropConfig ??= ImageCropConfig::create($this->config);
     }
 
     /**
@@ -102,33 +108,29 @@ final class FileManagerConfig
             throw FileManagerException::gdLibRequired();
         }
 
-        $config = self::prepareConfig(self::DEFAULT_RESIZE_CONFIG, $this->providedConfig);
-
-        if (trim($config['resizePath']) === '') {
-            throw FileManagerException::missingParam('resizePath');
+        if (
+            is_string($this->config['resizePath']) === false ||
+            trim($this->config['resizePath']) === ''
+        ) {
+            throw FileManagerException::invalidParam('resizePath');
         }
 
-        if (isset($config['thumbs']['large']['width'], $config['thumbs']['large']['height']) === false) {
-            throw FileManagerException::missingParam('thumbs.large');
+        if (
+            is_array($this->config['thumbs']) === false ||
+            $this->config['thumbs'] === []
+        ) {
+            throw FileManagerException::missingParam('thumbs');
         }
 
-        return $this->imageResizeConfig ??= ImageResizeConfig::create($config);
+        return $this->imageResizeConfig ??= ImageResizeConfig::create($this->config);
     }
 
+    /**
+     * @throws FileManagerException
+     */
     public function imageConvertConfig(): ImageConvertConfig
     {
-        $config = [
-            'removeAfterConvert' => (bool)($this->providedConfig['removeAfterConvert'] ?? false),
-            'resizePath' => $this->providedConfig['resizePath'] ?? null,
-            'dateFormat' => $this->providedConfig['dateFormat'] ?? null,
-            'thumbs' => [],
-        ];
-
-        if ($this->imageResizeConfig !== null && isset($this->imageResizeConfig->thumbs['large']) === true) {
-            $config['thumbs'] = array_keys($this->imageResizeConfig->thumbs);
-        }
-
-        return $this->imageConvertConfig ??= ImageConvertConfig::create($config);
+        return $this->imageConvertConfig ??= ImageConvertConfig::create($this->config);
     }
 
     /**
@@ -141,25 +143,43 @@ final class FileManagerConfig
         }
 
         if (
-            array_key_exists('watermarks', $this->providedConfig) === false ||
-            is_array($this->providedConfig['watermarks']) === false ||
-            $this->providedConfig['watermarks'] === []
+            is_string($this->config['resizePath']) === false ||
+            trim($this->config['resizePath']) === ''
+        ) {
+            throw FileManagerException::invalidParam('resizePath');
+        }
+
+        if (
+            is_array($this->config['thumbs']) === false ||
+            $this->config['thumbs'] === []
+        ) {
+            throw FileManagerException::missingParam('thumbs');
+        }
+
+        if (
+            is_array($this->config['watermarks']) === false ||
+            $this->config['watermarks'] === []
         ) {
             throw FileManagerException::missingParam('watermarks');
         }
 
-        return $this->imageWatermarkConfig ??= ImageWatermarkConfig::create(
-            [
-                'resizePath' => $this->imageResizeConfig->resizePath,
-                'dateFormat' => $this->imageResizeConfig->dateFormat,
-                'thumbs' => $this->imageResizeConfig->thumbs,
-                'watermarks' => $this->providedConfig['watermarks'],
-            ]
-        );
+        return $this->imageWatermarkConfig ??= ImageWatermarkConfig::create($this->config);
     }
 
-    private static function prepareConfig(array $defaults, array $provided): array
+    public function getConfig(): array
     {
+        return $this->config;
+    }
+
+    public function getProvidedConfig(): array
+    {
+        return $this->providedConfig;
+    }
+
+    private static function prepareConfig(array $provided): array
+    {
+        $defaults = self::DEFAULT_CONFIG;
+
         foreach ($defaults as $key => $value) {
             if (array_key_exists($key, $provided)) {
                 $defaults[$key] = $provided[$key];

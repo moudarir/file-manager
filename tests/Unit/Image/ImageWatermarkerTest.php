@@ -78,6 +78,7 @@ final class ImageWatermarkerTest extends TestCase
         $config = ImageWatermarkConfig::create([
             'resizePath' => $this->resizeDirectory,
             'dateFormat' => null,
+            'customDate' => null,
             'thumbs' => [
                 'large' => ['width' => 400, 'height' => 400],
             ],
@@ -522,6 +523,7 @@ final class ImageWatermarkerTest extends TestCase
             [
                 'resizePath' => $this->resizeDirectory,
                 'dateFormat' => null,
+                'customDate' => null,
                 'thumbs' => [
                     'large' => ['width' => 400, 'height' => 400],
                 ],

@@ -18,7 +18,7 @@ final readonly class ImageResizer
         private string $destinationFilepath,
         private int    $width,
         private int    $height,
-        private string $quality,
+        private int    $quality,
     ) {
     }
 
@@ -32,7 +32,6 @@ final readonly class ImageResizer
     {
         $thumbs = $config->thumbs;
         $resizePath = $config->resizePath;
-        //$converterPath = Common::imageMagickExecutablePath();
 
         /**
          * @var UploadedFile $file
@@ -47,7 +46,7 @@ final readonly class ImageResizer
             foreach ($thumbs as $thumb => $dimensions) {
                 $directory = Common::makeDirectory(
                     $resizePath,
-                    $file->createdAt(),
+                    $config->customDate !== null ? $config->customDate : $file->createdAt(),
                     $config->dateFormat,
                     $thumb
                 );
@@ -68,7 +67,7 @@ final readonly class ImageResizer
                     $destinationFilepath,
                     $width,
                     $height,
-                    $config->quality,
+                    $config->resizeQuality,
                 )->process();
 
                 if ($thumb === 'large') {
@@ -106,7 +105,7 @@ final readonly class ImageResizer
             $this->sourceFilepath,
             $this->destinationFilepath,
             [
-                '-quality ' . escapeshellarg($this->quality),
+                '-quality ' . $this->quality,
                 '-resize ' . $this->width.'x'.$this->height
             ]
         );

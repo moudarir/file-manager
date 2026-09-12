@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Moudarir\FileManager\Upload;
 
-use DateTimeImmutable;
+use DateTimeInterface;
 use Moudarir\File\Enum\MimeType;
 use Moudarir\File\FileResource;
 
@@ -13,7 +13,7 @@ final class UploadedFile
 
     private function __construct(
         private readonly string            $originalName,
-        private readonly DateTimeImmutable $createdAt,
+        private readonly DateTimeInterface $createdAt,
         private string                     $dirname,
         private string                     $filepath,
         private string                     $basename,
@@ -30,7 +30,7 @@ final class UploadedFile
         FileResource $fileResource,
         MimeType     $mimeType,
         string       $originalName,
-        DateTimeImmutable $createdAt,
+        DateTimeInterface $createdAt,
         ?array       $imageDimensions = null,
     ): self
     {
@@ -53,7 +53,7 @@ final class UploadedFile
         return $this->originalName;
     }
 
-    public function createdAt(): DateTimeImmutable
+    public function createdAt(): DateTimeInterface
     {
         return $this->createdAt;
     }

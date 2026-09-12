@@ -55,10 +55,11 @@ final class ImageResizerTest extends TestCase
         ImageResizer::create($collection, ImageResizeConfig::create([
             'resizePath' => $this->resizeDirectory,
             'dateFormat' => null,
+            'customDate' => null,
             'thumbs' => [
                 'large' => ['width' => 400, 'height' => 400],
             ],
-            'quality' => '85',
+            'resizeQuality' => 85,
             'removeAfterResize' => false,
         ]));
 
@@ -385,10 +386,11 @@ final class ImageResizerTest extends TestCase
         $config = [
             'resizePath' => $this->resizeDirectory,
             'dateFormat' => null,
+            'customDate' => null,
             'thumbs' => [
                 'large' => ['width' => 400, 'height' => 400],
             ],
-            'quality' => '85',
+            'resizeQuality' => 85,
             'removeAfterResize' => false,
         ];
 

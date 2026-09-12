@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Moudarir\FileManager\Tests\Unit\Upload;
 
 use DateTimeImmutable;
+use DateTimeInterface;
 use Moudarir\File\Enum\MimeType;
 use Moudarir\File\File;
 use Moudarir\FileManager\Exceptions\FileManagerException;
@@ -871,21 +872,23 @@ final class FileUploaderTest extends TestCase
     }
 
     private function createUploadConfig(
-        ?string $uploadPath = null,
-        ?bool $encryptName = null,
-        int $maxFilesize = 0,
-        ?string $dateFormat = null,
-        ?bool $overwrite = null,
-        array $allowedMimeTypes = [],
-        int $maxImageWidth = 0,
-        int $maxImageHeight = 0,
-        int $minImageWidth = 0,
-        int $minImageHeight = 0,
+        ?string            $uploadPath = null,
+        ?bool              $encryptName = null,
+        int                $maxFilesize = 0,
+        ?string            $dateFormat = null,
+        ?DateTimeInterface $customDate = null,
+        ?bool              $overwrite = null,
+        array              $allowedMimeTypes = [],
+        int                $maxImageWidth = 0,
+        int                $maxImageHeight = 0,
+        int                $minImageWidth = 0,
+        int                $minImageHeight = 0,
     ): UploadConfig {
         return UploadConfig::create([
             'field' => 'file',
             'uploadPath' => $uploadPath ?? $this->uploadPath,
             'dateFormat' => $dateFormat,
+            'customDate' => $customDate,
             'maxFilesize' => $maxFilesize,
             'maxImageWidth' => $maxImageWidth,
             'maxImageHeight' => $maxImageHeight,

@@ -29,6 +29,11 @@ class FileManagerException extends Exception
         return new self(sprintf("The parameter `%s` is mandatory.", $param));
     }
 
+    public static function invalidParam(string $param): self
+    {
+        return new self(sprintf("The parameter `%s` is invalid.", $param));
+    }
+
     public static function missingCopyFilepath(): self
     {
         return new self("The filepath of the file to copy is missing.");

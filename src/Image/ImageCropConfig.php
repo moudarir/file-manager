@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Moudarir\FileManager\Image;
 
+use Moudarir\FileManager\Exceptions\FileManagerException;
+use Moudarir\FileManager\Helpers\ValidateParam;
+
 final readonly class ImageCropConfig
 {
 
@@ -11,8 +14,13 @@ final readonly class ImageCropConfig
     {
     }
 
+    /**
+     * @throws FileManagerException
+     */
     public static function create(array $config): self
     {
+        ValidateParam::notLessThan($config, ['cropRatioWidth', 'cropRatioHeight'], 1);
+
         return new self($config['cropRatioWidth'], $config['cropRatioHeight']);
     }
 }

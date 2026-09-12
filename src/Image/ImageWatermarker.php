@@ -54,7 +54,7 @@ final readonly class ImageWatermarker
             foreach ($watermarks as $thumb => $watermark) {
                 $directory = Common::buildDirectoryPath(
                     $config->resizePath,
-                    $file->createdAt(),
+                    $config->customDate !== null ? $config->customDate : $file->createdAt(),
                     $config->dateFormat,
                     $thumb
                 );

@@ -43,7 +43,7 @@ final readonly class ImageConverter
                 foreach ($thumbs as $thumb) {
                     $directory = Common::buildDirectoryPath(
                         $config->resizePath,
-                        $file->createdAt(),
+                        $config->customDate !== null ? $config->customDate : $file->createdAt(),
                         $config->dateFormat,
                         $thumb
                     );

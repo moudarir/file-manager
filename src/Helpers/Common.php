@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Moudarir\FileManager\Helpers;
 
-use DateTimeImmutable;
+use DateTimeInterface;
 use Moudarir\FileManager\Exceptions\FileManagerException;
 use Moudarir\Helpers\DirectoryHelper;
 
@@ -16,7 +16,7 @@ final class Common
      */
     public static function makeDirectory(
         string $path,
-        DateTimeImmutable $date,
+        DateTimeInterface $date,
         ?string $dateFormat = null,
         ?string $extraPath = null,
     ): string
@@ -36,7 +36,7 @@ final class Common
 
     public static function buildDirectoryPath(
         string $path,
-        DateTimeImmutable $date,
+        DateTimeInterface $date,
         ?string $dateFormat = null,
         ?string $extraPath = null,
     ): string

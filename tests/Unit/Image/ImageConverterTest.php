@@ -51,6 +51,7 @@ final class ImageConverterTest extends TestCase
                 'thumbs' => [],
                 'resizePath' => null,
                 'dateFormat' => null,
+                'customDate' => null,
             ])
         );
 
@@ -100,6 +101,7 @@ final class ImageConverterTest extends TestCase
                 'thumbs' => ['large', 'medium', 'small'],
                 'resizePath' => $this->directory,
                 'dateFormat' => null,
+                'customDate' => null,
             ])
         );
 
@@ -135,6 +137,7 @@ final class ImageConverterTest extends TestCase
                 'thumbs' => [],
                 'resizePath' => null,
                 'dateFormat' => null,
+                'customDate' => null,
             ])
         );
 
@@ -162,6 +165,7 @@ final class ImageConverterTest extends TestCase
                 'thumbs' => [],
                 'resizePath' => null,
                 'dateFormat' => null,
+                'customDate' => null,
             ])
         );
 
@@ -184,6 +188,7 @@ final class ImageConverterTest extends TestCase
                 'thumbs' => [],
                 'resizePath' => null,
                 'dateFormat' => null,
+                'customDate' => null,
             ])
         );
 
@@ -216,6 +221,7 @@ final class ImageConverterTest extends TestCase
                 'thumbs' => ['large', 'medium'],
                 'resizePath' => $this->directory,
                 'dateFormat' => null,
+                'customDate' => null,
             ])
         );
 
@@ -255,6 +261,7 @@ final class ImageConverterTest extends TestCase
             'thumbs' => ['large', 'medium'],
             'resizePath' => $this->directory,
             'dateFormat' => null,
+            'customDate' => null,
         ]);
 
         self::expectException(FileManagerException::class);
@@ -291,6 +298,7 @@ final class ImageConverterTest extends TestCase
             'thumbs' => [],
             'resizePath' => null,
             'dateFormat' => null,
+            'customDate' => null,
         ]);
 
         self::expectException(FileManagerException::class);
