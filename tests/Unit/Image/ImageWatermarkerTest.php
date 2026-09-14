@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Moudarir\FileManager\Tests\Unit\Image;
 
 use DateTimeImmutable;
+use Moudarir\File\Enum\MimeType;
 use Moudarir\File\File;
-use Moudarir\FileManager\Enums\WatermarkAlignment;
-use Moudarir\FileManager\Exceptions\FileManagerException;
+use Moudarir\FileManager\Collections\ThumbCollection;
 use Moudarir\FileManager\Image\ImageWatermarkConfig;
 use Moudarir\FileManager\Image\ImageWatermarker;
 use Moudarir\FileManager\Upload\UploadedFile;
@@ -17,663 +17,352 @@ use PHPUnit\Framework\TestCase;
 
 final class ImageWatermarkerTest extends TestCase
 {
-    private string $sourceDirectory;
-
-    private string $resizeDirectory;
-
-    private string $watermarkDirectory;
+    private string $directory;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->sourceDirectory = sys_get_temp_dir()
-            .DIRECTORY_SEPARATOR
-            .'file-manager-watermark-source-'
-            .uniqid('', true);
+        $this->directory = sys_get_temp_dir()
+            . DIRECTORY_SEPARATOR
+            . 'file-manager-watermarker-'
+            . uniqid('', true);
 
-        $this->resizeDirectory = sys_get_temp_dir()
-            .DIRECTORY_SEPARATOR
-            .'file-manager-watermark-resize-'
-            .uniqid('', true);
-
-        $this->watermarkDirectory = sys_get_temp_dir()
-            .DIRECTORY_SEPARATOR
-            .'file-manager-watermark-overlay-'
-            .uniqid('', true);
-
-        mkdir($this->sourceDirectory, 0777, true);
-        mkdir($this->resizeDirectory, 0777, true);
-        mkdir($this->watermarkDirectory, 0777, true);
+        mkdir($this->directory, 0755, true);
     }
 
     protected function tearDown(): void
     {
-        $this->removeDirectory($this->sourceDirectory);
-        $this->removeDirectory($this->resizeDirectory);
-        $this->removeDirectory($this->watermarkDirectory);
+        $this->removeDirectory($this->directory);
 
         parent::tearDown();
     }
 
     #[Test]
-    public function itDoesNothingWhenCollectionIsEmpty(): void
+    public function itAppliesWatermarkToOriginalImage(): void
     {
-        $collection = new UploadedFileCollection('files', []);
-
-        ImageWatermarker::create($collection, $this->createConfig());
-
-        self::assertTrue($collection->isEmpty());
-    }
-
-    #[Test]
-    public function itDoesNothingWhenNoWatermarksMatchConfiguredThumbnails(): void
-    {
-        $sourceFilepath = $this->createImage('source.jpg', 400, 267);
+        $sourceFilepath = $this->createSourceImage('original.jpg');
+        $watermarkFilepath = $this->createWatermarkImage('watermark.png');
 
         $file = $this->createUploadedFile($sourceFilepath);
 
-        $collection = new UploadedFileCollection('files', [$file]);
+        $before = $this->getImageContent($sourceFilepath);
 
-        $config = ImageWatermarkConfig::create([
-            'resizePath' => $this->resizeDirectory,
-            'dateFormat' => null,
-            'customDate' => null,
-            'thumbs' => [
-                'large' => ['width' => 400, 'height' => 400],
-            ],
-            'watermarks' => [],
-        ]);
-
-        ImageWatermarker::create($collection, $config);
-
-        self::assertSame($sourceFilepath, $file->filepath());
-    }
-
-    #[Test]
-    public function itSkipsNonImageFiles(): void
-    {
-        $sourceFilepath = $this->createTextFile('document.txt');
-
-        $file = $this->createUploadedFile($sourceFilepath);
-
-        $collection = new UploadedFileCollection('files', [$file]);
-
-        ImageWatermarker::create($collection, $this->createConfig());
-
-        self::assertFileExists($sourceFilepath);
-    }
-
-    #[Test]
-    public function itProcessesOnlyWatermarksMatchingConfiguredThumbnails(): void
-    {
-        $sourceFilepath = $this->createImage('source.jpg', 400, 267);
-
-        $file = $this->createUploadedFile($sourceFilepath);
-
-        $largeDirectory = $this->resizeDirectory .DIRECTORY_SEPARATOR .'large';
-
-        mkdir($largeDirectory, 0777, true);
-
-        copy(
-            $sourceFilepath,
-            $largeDirectory.DIRECTORY_SEPARATOR.$file->basename()
+        ImageWatermarker::create(
+            new UploadedFileCollection('file', [$file]),
+            $this->createConfig([
+                'original' => [
+                    'overlayFilepath' => $watermarkFilepath,
+                ],
+            ])
         );
 
-        $overlayFilepath = $this->createOverlay('watermark.png');
+        $after = $this->getImageContent($sourceFilepath);
 
-        $collection = new UploadedFileCollection('files', [$file]);
+        self::assertNotSame($before, $after);
+    }
 
-        $config = $this->createConfig([
-            'thumbs' => [
-                'large' => ['width' => 400, 'height' => 400],
-                'medium' => ['width' => 128, 'height' => 128],
-            ],
-            'watermarks' => [
-                'large' => [
-                    'overlayFilepath' => $overlayFilepath,
+    #[Test]
+    public function itDoesNotApplyThumbnailWatermarkToOriginalImage(): void
+    {
+        $sourceFilepath = $this->createSourceImage('original.jpg');
+        $watermarkFilepath = $this->createWatermarkImage('watermark.png');
+
+        $file = $this->createUploadedFile($sourceFilepath);
+
+        $before = $this->getImageContent($sourceFilepath);
+
+        ImageWatermarker::create(
+            new UploadedFileCollection('file', [$file]),
+            $this->createConfig([
+                'big' => [
+                    'overlayFilepath' => $watermarkFilepath,
+                ],
+            ])
+        );
+
+        $after = $this->getImageContent($sourceFilepath);
+
+        self::assertSame($before, $after);
+    }
+
+    #[Test]
+    public function itAppliesWatermarkToMatchingThumbnail(): void
+    {
+        $sourceFilepath = $this->createSourceImage('original.jpg');
+        $thumbFilepath = $this->createSourceImage('big.jpg');
+        $watermarkFilepath = $this->createWatermarkImage('watermark.png');
+
+        $file = $this->createUploadedFile($sourceFilepath);
+        $thumb = $this->createUploadedFile($thumbFilepath);
+
+        $file->setThumbCollection(new ThumbCollection(['big' => $thumb]));
+
+        $before = $this->getImageContent($thumbFilepath);
+
+        ImageWatermarker::create(
+            new UploadedFileCollection('file', [$file]),
+            $this->createConfig([
+                'big' => [
+                    'overlayFilepath' => $watermarkFilepath,
+                ],
+            ])
+        );
+
+        $after = $this->getImageContent($thumbFilepath);
+
+        self::assertNotSame($before, $after);
+    }
+
+    #[Test]
+    public function itDoesNotApplyWatermarkToNonMatchingThumbnail(): void
+    {
+        $sourceFilepath = $this->createSourceImage('original.jpg');
+        $thumbFilepath = $this->createSourceImage('big.jpg');
+        $watermarkFilepath = $this->createWatermarkImage('watermark.png');
+
+        $file = $this->createUploadedFile($sourceFilepath);
+        $thumb = $this->createUploadedFile($thumbFilepath);
+
+        $file->setThumbCollection(new ThumbCollection(['big' => $thumb]));
+
+        $before = $this->getImageContent($thumbFilepath);
+
+        ImageWatermarker::create(
+            new UploadedFileCollection('file', [$file]),
+            $this->createConfig([
+                'small' => [
+                    'overlayFilepath' => $watermarkFilepath,
+                ],
+            ])
+        );
+
+        $after = $this->getImageContent($thumbFilepath);
+
+        self::assertSame($before, $after);
+    }
+
+    #[Test]
+    public function itAppliesWatermarkToOriginalAndMatchingThumbnail(): void
+    {
+        $sourceFilepath = $this->createSourceImage('original.jpg');
+        $thumbFilepath = $this->createSourceImage('big.jpg');
+
+        $originalWatermarkFilepath = $this->createWatermarkImage('original-watermark.png');
+
+        $thumbnailWatermarkFilepath = $this->createWatermarkImage('thumbnail-watermark.png');
+
+        $file = $this->createUploadedFile($sourceFilepath);
+        $thumb = $this->createUploadedFile($thumbFilepath);
+
+        $file->setThumbCollection(new ThumbCollection(['big' => $thumb]));
+
+        $originalBefore = $this->getImageContent($sourceFilepath);
+        $thumbBefore = $this->getImageContent($thumbFilepath);
+
+        ImageWatermarker::create(
+            new UploadedFileCollection('file', [$file]),
+            $this->createConfig([
+                'original' => [
+                    'overlayFilepath' => $originalWatermarkFilepath,
+                ],
+                'big' => [
+                    'overlayFilepath' => $thumbnailWatermarkFilepath,
+                ],
+            ])
+        );
+
+        $originalAfter = $this->getImageContent($sourceFilepath);
+        $thumbAfter = $this->getImageContent($thumbFilepath);
+
+        self::assertNotSame($originalBefore, $originalAfter);
+        self::assertNotSame($thumbBefore, $thumbAfter);
+    }
+
+    #[Test]
+    public function itDoesNotApplyOriginalWatermarkToThumbnail(): void
+    {
+        $sourceFilepath = $this->createSourceImage('original.jpg');
+        $thumbFilepath = $this->createSourceImage('big.jpg');
+        $watermarkFilepath = $this->createWatermarkImage('watermark.png');
+
+        $file = $this->createUploadedFile($sourceFilepath);
+        $thumb = $this->createUploadedFile($thumbFilepath);
+
+        $file->setThumbCollection(new ThumbCollection(['big' => $thumb]));
+
+        $sourceBefore = $this->getImageContent($sourceFilepath);
+        $thumbBefore = $this->getImageContent($thumbFilepath);
+
+        ImageWatermarker::create(
+            new UploadedFileCollection('file', [$file]),
+            $this->createConfig([
+                'original' => [
+                    'overlayFilepath' => $watermarkFilepath,
+                ],
+            ])
+        );
+
+        $sourceAfter = $this->getImageContent($sourceFilepath);
+        $thumbAfter = $this->getImageContent($thumbFilepath);
+
+        self::assertNotSame($sourceBefore, $sourceAfter);
+        self::assertSame($thumbBefore, $thumbAfter);
+    }
+
+    #[Test]
+    public function itDoesNotApplyThumbnailWatermarkWhenThumbCollectionIsAbsent(): void
+    {
+        $sourceFilepath = $this->createSourceImage('original.jpg');
+        $watermarkFilepath = $this->createWatermarkImage('watermark.png');
+
+        $file = $this->createUploadedFile($sourceFilepath);
+
+        self::assertNull($file->thumbCollection());
+
+        $before = $this->getImageContent($sourceFilepath);
+
+        ImageWatermarker::create(
+            new UploadedFileCollection('file', [$file]),
+            $this->createConfig([
+                'big' => [
+                    'overlayFilepath' => $watermarkFilepath,
+                ],
+            ])
+        );
+
+        $after = $this->getImageContent($sourceFilepath);
+
+        self::assertSame($before, $after);
+    }
+
+    #[Test]
+    public function itAppliesWatermarkOnlyToConfiguredThumbnails(): void
+    {
+        $sourceFilepath = $this->createSourceImage('original.jpg');
+        $bigFilepath = $this->createSourceImage('big.jpg');
+        $mediumFilepath = $this->createSourceImage('medium.jpg');
+        $smallFilepath = $this->createSourceImage('small.jpg');
+
+        $watermarkFilepath = $this->createWatermarkImage('watermark.png');
+
+        $file = $this->createUploadedFile($sourceFilepath);
+
+        $file->setThumbCollection(
+            new ThumbCollection([
+                'big' => $this->createUploadedFile($bigFilepath),
+                'medium' => $this->createUploadedFile($mediumFilepath),
+                'small' => $this->createUploadedFile($smallFilepath),
+            ])
+        );
+
+        $bigBefore = $this->getImageContent($bigFilepath);
+        $mediumBefore = $this->getImageContent($mediumFilepath);
+        $smallBefore = $this->getImageContent($smallFilepath);
+
+        ImageWatermarker::create(
+            new UploadedFileCollection('file', [$file]),
+            $this->createConfig([
+                'big' => [
+                    'overlayFilepath' => $watermarkFilepath,
                 ],
                 'small' => [
-                    'overlayFilepath' => $overlayFilepath,
+                    'overlayFilepath' => $watermarkFilepath,
                 ],
-            ],
-        ]);
-
-        ImageWatermarker::create($collection, $config);
-
-        self::assertFileExists($largeDirectory.DIRECTORY_SEPARATOR.$file->basename());
-    }
-
-    #[Test]
-    public function itThrowsWhenConfiguredThumbnailDoesNotExist(): void
-    {
-        $sourceFilepath = $this->createImage('source.jpg', 400, 267);
-
-        $file = $this->createUploadedFile($sourceFilepath);
-
-        $overlayFilepath = $this->createOverlay('watermark.png');
-
-        $collection = new UploadedFileCollection('files', [$file]);
-
-        $config = $this->createConfig([
-            'watermarks' => [
-                'large' => [
-                    'overlayFilepath' => $overlayFilepath,
-                ],
-            ],
-        ]);
-
-        $this->expectException(FileManagerException::class);
-
-        ImageWatermarker::create($collection, $config);
-    }
-
-    #[Test]
-    public function itSkipsMissingOverlayFile(): void
-    {
-        $sourceFilepath = $this->createImage('source.jpg', 400, 267);
-
-        $file = $this->createUploadedFile($sourceFilepath);
-
-        $largeDirectory = $this->resizeDirectory .DIRECTORY_SEPARATOR .'large';
-
-        mkdir($largeDirectory, 0777, true);
-
-        $thumbnailPath = $largeDirectory
-            .DIRECTORY_SEPARATOR
-            .$file->basename();
-
-        copy($sourceFilepath, $thumbnailPath);
-
-        $collection = new UploadedFileCollection('files', [$file]);
-
-        $config = $this->createConfig([
-            'watermarks' => [
-                'large' => [
-                    'overlayFilepath' => $this->watermarkDirectory
-                        .DIRECTORY_SEPARATOR
-                        .'missing.png',
-                ],
-            ],
-        ]);
-
-        ImageWatermarker::create($collection, $config);
-
-        self::assertFileExists($thumbnailPath);
-    }
-
-    #[Test]
-    public function itThrowsWhenOverlayIsNotAValidImage(): void
-    {
-        $sourceFilepath = $this->createImage('source.jpg', 400, 267);
-
-        $file = $this->createUploadedFile($sourceFilepath);
-
-        $largeDirectory = $this->resizeDirectory .DIRECTORY_SEPARATOR .'large';
-
-        mkdir($largeDirectory, 0777, true);
-
-        copy(
-            $sourceFilepath,
-            $largeDirectory.DIRECTORY_SEPARATOR.$file->basename()
+            ])
         );
 
-        $overlayFilepath = $this->createTextFile('invalid.png');
+        $bigAfter = $this->getImageContent($bigFilepath);
+        $mediumAfter = $this->getImageContent($mediumFilepath);
+        $smallAfter = $this->getImageContent($smallFilepath);
 
-        $collection = new UploadedFileCollection('files', [$file]);
-
-        $config = $this->createConfig([
-            'watermarks' => [
-                'large' => [
-                    'overlayFilepath' => $overlayFilepath,
-                ],
-            ],
-        ]);
-
-        $this->expectException(FileManagerException::class);
-
-        ImageWatermarker::create($collection, $config);
+        self::assertNotSame($bigBefore, $bigAfter);
+        self::assertSame($mediumBefore, $mediumAfter);
+        self::assertNotSame($smallBefore, $smallAfter);
     }
 
     #[Test]
-    public function itThrowsWhenOverlayImageTypeIsUnsupported(): void
+    public function itProcessesMultipleUploadedImages(): void
     {
-        $sourceFilepath = $this->createImage('source.jpg', 400, 267);
+        $firstFilepath = $this->createSourceImage('first.jpg');
+        $secondFilepath = $this->createSourceImage('second.jpg');
+        $watermarkFilepath = $this->createWatermarkImage('watermark.png');
 
-        $file = $this->createUploadedFile($sourceFilepath);
+        $firstFile = $this->createUploadedFile($firstFilepath);
+        $secondFile = $this->createUploadedFile($secondFilepath);
 
-        $largeDirectory = $this->resizeDirectory .DIRECTORY_SEPARATOR .'large';
+        $firstBefore = $this->getImageContent($firstFilepath);
+        $secondBefore = $this->getImageContent($secondFilepath);
 
-        mkdir($largeDirectory, 0777, true);
-
-        copy(
-            $sourceFilepath,
-            $largeDirectory.DIRECTORY_SEPARATOR.$file->basename()
+        ImageWatermarker::create(
+            new UploadedFileCollection('file', [$firstFile, $secondFile]),
+            $this->createConfig([
+                'original' => [
+                    'overlayFilepath' => $watermarkFilepath,
+                ],
+            ])
         );
 
-        $overlayFilepath = $this->createBmpOverlay('watermark.bmp');
+        $firstAfter = $this->getImageContent($firstFilepath);
+        $secondAfter = $this->getImageContent($secondFilepath);
 
-        $collection = new UploadedFileCollection('files', [$file]);
-
-        $config = $this->createConfig([
-            'watermarks' => [
-                'large' => [
-                    'overlayFilepath' => $overlayFilepath,
-                ],
-            ],
-        ]);
-
-        $this->expectException(FileManagerException::class);
-
-        ImageWatermarker::create($collection, $config);
+        self::assertNotSame($firstBefore, $firstAfter);
+        self::assertNotSame($secondBefore, $secondAfter);
     }
 
     #[Test]
-    public function itAppliesWatermarkToTheConfiguredThumbnail(): void
+    public function itIgnoresNonImageFiles(): void
     {
-        $sourceFilepath = $this->createImage('source.jpg', 400, 267);
+        $filepath = $this->directory . DIRECTORY_SEPARATOR . 'document.txt';
 
-        $file = $this->createUploadedFile($sourceFilepath);
+        file_put_contents($filepath, 'test file');
 
-        $largeDirectory = $this->resizeDirectory .DIRECTORY_SEPARATOR .'large';
+        $file = $this->createUploadedFile($filepath, MimeType::TEXT_PLAIN);
 
-        mkdir($largeDirectory, 0777, true);
+        $before = file_get_contents($filepath);
 
-        $thumbnailPath = $largeDirectory .DIRECTORY_SEPARATOR .$file->basename();
-
-        copy($sourceFilepath, $thumbnailPath);
-
-        $overlayFilepath = $this->createOverlay('watermark.png');
-
-        $before = md5_file($thumbnailPath);
-
-        $collection = new UploadedFileCollection('files', [$file]);
-
-        $config = $this->createConfig([
-            'watermarks' => [
-                'large' => [
-                    'overlayFilepath' => $overlayFilepath,
+        ImageWatermarker::create(
+            new UploadedFileCollection('file', [$file]),
+            $this->createConfig([
+                'original' => [
+                    'overlayFilepath' => $this->createWatermarkImage('watermark.png'),
                 ],
-            ],
-        ]);
-
-        ImageWatermarker::create($collection, $config);
-
-        self::assertFileExists($thumbnailPath);
-        self::assertNotSame($before, md5_file($thumbnailPath));
-    }
-
-    #[Test]
-    public function itUsesCenterAlignmentByDefault(): void
-    {
-        $sourceFilepath = $this->createImage('source.jpg', 400, 400);
-
-        $file = $this->createUploadedFile($sourceFilepath);
-
-        $thumbnailPath = $this->prepareThumbnail($file, 'large');
-
-        $overlayFilepath = $this->createOverlay('watermark.png', 100, 100);
-
-        $collection = new UploadedFileCollection('files', [$file]);
-
-        $config = $this->createConfig([
-            'watermarks' => [
-                'large' => [
-                    'overlayFilepath' => $overlayFilepath,
-                    'horizontalAlignment' => WatermarkAlignment::H_CENTER,
-                    'verticalAlignment' => WatermarkAlignment::V_MIDDLE,
-                ],
-            ],
-        ]);
-
-        ImageWatermarker::create($collection, $config);
-
-        self::assertFileExists($thumbnailPath);
-    }
-
-    #[Test]
-    public function itUsesRightBottomAlignment(): void
-    {
-        $sourceFilepath = $this->createImage('source.jpg', 400, 400);
-
-        $file = $this->createUploadedFile($sourceFilepath);
-
-        $thumbnailPath = $this->prepareThumbnail($file, 'large');
-
-        $overlayFilepath = $this->createOverlay('watermark.png', 100, 100);
-
-        $collection = new UploadedFileCollection('files', [$file]);
-
-        $config = $this->createConfig([
-            'watermarks' => [
-                'large' => [
-                    'overlayFilepath' => $overlayFilepath,
-                    'horizontalAlignment' => WatermarkAlignment::H_RIGHT,
-                    'verticalAlignment' => WatermarkAlignment::V_BOTTOM,
-                ],
-            ],
-        ]);
-
-        ImageWatermarker::create($collection, $config);
-
-        self::assertFileExists($thumbnailPath);
-    }
-
-    #[Test]
-    public function itFallsBackToDefaultAlignmentWhenAlignmentIsInvalid(): void
-    {
-        $sourceFilepath = $this->createImage('source.jpg', 400, 400);
-
-        $file = $this->createUploadedFile($sourceFilepath);
-
-        $thumbnailPath = $this->prepareThumbnail($file, 'large');
-
-        $overlayFilepath = $this->createOverlay('watermark.png', 100, 100);
-
-        $collection = new UploadedFileCollection('files', [$file]);
-
-        $config = $this->createConfig([
-            'watermarks' => [
-                'large' => [
-                    'overlayFilepath' => $overlayFilepath,
-                    'horizontalAlignment' => 'invalid',
-                    'verticalAlignment' => 'invalid',
-                ],
-            ],
-        ]);
-
-        ImageWatermarker::create($collection, $config);
-
-        self::assertFileExists($thumbnailPath);
-    }
-
-    #[Test]
-    public function itFallsBackToDefaultOpacityWhenOpacityIsInvalid(): void
-    {
-        $sourceFilepath = $this->createImage('source.jpg', 400, 400);
-
-        $file = $this->createUploadedFile($sourceFilepath);
-
-        $thumbnailPath = $this->prepareThumbnail($file, 'large');
-
-        $overlayFilepath = $this->createOverlay('watermark.png', 100, 100);
-
-        $collection = new UploadedFileCollection('files', [$file]);
-
-        $config = $this->createConfig([
-            'watermarks' => [
-                'large' => [
-                    'overlayFilepath' => $overlayFilepath,
-                    'opacity' => 0,
-                ],
-            ],
-        ]);
-
-        ImageWatermarker::create($collection, $config);
-
-        self::assertFileExists($thumbnailPath);
-    }
-
-    #[Test]
-    public function itFallsBackToDefaultTransparencyCoordinatesWhenInvalid(): void
-    {
-        $sourceFilepath = $this->createImage('source.jpg', 400, 400);
-
-        $file = $this->createUploadedFile($sourceFilepath);
-
-        $thumbnailPath = $this->prepareThumbnail($file, 'large');
-
-        $overlayFilepath = $this->createOverlay('watermark.png', 100, 100);
-
-        $collection = new UploadedFileCollection('files', [$file]);
-
-        $config = $this->createConfig([
-            'watermarks' => [
-                'large' => [
-                    'overlayFilepath' => $overlayFilepath,
-                    'xTransparency' => -1,
-                    'yTransparency' => 128,
-                ],
-            ],
-        ]);
-
-        ImageWatermarker::create($collection, $config);
-
-        self::assertFileExists($thumbnailPath);
-    }
-
-    #[Test]
-    public function itUsesTheActualDimensionsOfEachThumbnail(): void
-    {
-        $sourceFilepath = $this->createImage('source.jpg', 1200, 800);
-
-        $file = $this->createUploadedFile($sourceFilepath);
-
-        $largePath = $this->prepareThumbnail($file, 'large', 400, 267);
-        $mediumPath = $this->prepareThumbnail($file, 'medium', 128, 85);
-
-        $overlayFilepath = $this->createOverlay('watermark.png', 40, 40);
-
-        $collection = new UploadedFileCollection('files', [$file]);
-
-        $config = $this->createConfig([
-            'thumbs' => [
-                'large' => ['width' => 400, 'height' => 400],
-                'medium' => ['width' => 128, 'height' => 128],
-            ],
-            'watermarks' => [
-                'large' => [
-                    'overlayFilepath' => $overlayFilepath,
-                    'horizontalAlignment' => WatermarkAlignment::H_RIGHT,
-                    'verticalAlignment' => WatermarkAlignment::V_BOTTOM,
-                ],
-                'medium' => [
-                    'overlayFilepath' => $overlayFilepath,
-                    'horizontalAlignment' => WatermarkAlignment::H_RIGHT,
-                    'verticalAlignment' => WatermarkAlignment::V_BOTTOM,
-                ],
-            ],
-        ]);
-
-        $largeBefore = md5_file($largePath);
-        $mediumBefore = md5_file($mediumPath);
-
-        ImageWatermarker::create($collection, $config);
-
-        self::assertNotSame($largeBefore, md5_file($largePath));
-        self::assertNotSame($mediumBefore, md5_file($mediumPath));
-    }
-
-    #[Test]
-    public function itProcessesMultipleFiles(): void
-    {
-        $firstSource = $this->createImage('first.jpg', 400, 400);
-        $secondSource = $this->createImage('second.jpg', 400, 400);
-
-        $firstFile = $this->createUploadedFile($firstSource);
-        $secondFile = $this->createUploadedFile($secondSource);
-
-        $firstPath = $this->prepareThumbnail($firstFile, 'large');
-        $secondPath = $this->prepareThumbnail($secondFile, 'large');
-
-        $overlayFilepath = $this->createOverlay('watermark.png');
-
-        $firstBefore = md5_file($firstPath);
-        $secondBefore = md5_file($secondPath);
-
-        $collection = new UploadedFileCollection('files', [$firstFile, $secondFile]);
-
-        $config = $this->createConfig([
-            'watermarks' => [
-                'large' => [
-                    'overlayFilepath' => $overlayFilepath,
-                ],
-            ],
-        ]);
-
-        ImageWatermarker::create($collection, $config);
-
-        self::assertNotSame($firstBefore, md5_file($firstPath));
-        self::assertNotSame($secondBefore, md5_file($secondPath));
-    }
-
-    private function createConfig(array $overrides = []): ImageWatermarkConfig
-    {
-        $config = array_replace_recursive(
-            [
-                'resizePath' => $this->resizeDirectory,
-                'dateFormat' => null,
-                'customDate' => null,
-                'thumbs' => [
-                    'large' => ['width' => 400, 'height' => 400],
-                ],
-                'watermarks' => [
-                    'large' => [
-                        'overlayFilepath' => $this->watermarkDirectory .DIRECTORY_SEPARATOR .'watermark.png',
-                        'horizontalAlignment' => WatermarkAlignment::H_CENTER,
-                        'verticalAlignment' => WatermarkAlignment::V_MIDDLE,
-                        'opacity' => 19,
-                        'xTransparency' => 4,
-                        'yTransparency' => 4,
-                    ],
-                ],
-            ],
-            $overrides
+            ])
         );
 
-        return ImageWatermarkConfig::create($config);
+        $after = file_get_contents($filepath);
+
+        self::assertSame($before, $after);
     }
 
-    private function createUploadedFile(string $filepath): UploadedFile
+    private function createConfig(array $watermarks): ImageWatermarkConfig
     {
-        $file = File::create($filepath);
-        $mimeType = $file->detection()->mimeType();
-        $dimensions = null;
+        return ImageWatermarkConfig::create([
+            'watermarks' => $watermarks,
+        ]);
+    }
 
-        if ($mimeType->isImage() === true) {
-            $info = @getimagesize($filepath);
-
-            self::assertIsArray($info);
-
-            $dimensions = [
-                'width' => $info[0],
-                'height' => $info[1],
-                'htmlAttributes' => $info[3],
-            ];
-        }
+    private function createUploadedFile(
+        string $filepath,
+        MimeType $mimeType = MimeType::JPEG,
+    ): UploadedFile {
+        $file = File::create($filepath, $mimeType);
 
         return UploadedFile::create(
             $file->resource(),
             $mimeType,
             basename($filepath),
             new DateTimeImmutable(),
-            $dimensions,
         );
     }
 
-    private function prepareThumbnail(
-        UploadedFile $file,
-        string $thumb,
-        ?int $width = null,
-        ?int $height = null,
-    ): string {
-        $width ??= $file->imageWidth();
-        $height ??= $file->imageHeight();
-
-        $directory = $this->resizeDirectory .DIRECTORY_SEPARATOR .$thumb;
-
-        if (is_dir($directory) === false) {
-            mkdir($directory, 0777, true);
-        }
-
-        $source = $file->filepath();
-
-        if ($width !== $file->imageWidth() || $height !== $file->imageHeight()) {
-            $source = $this->createImage($file->basename(), $width, $height);
-        }
-
-        $destination = $directory .DIRECTORY_SEPARATOR .$file->basename();
-
-        copy($source, $destination);
-
-        return $destination;
-    }
-
-    private function createOverlay(
-        string $filename,
-        int $width = 50,
-        int $height = 50,
-    ): string {
-        $filepath = $this->watermarkDirectory .DIRECTORY_SEPARATOR .$filename;
+    private function createSourceImage(string $filename, int $width = 200, int $height = 200): string
+    {
+        $filepath = $this->directory . DIRECTORY_SEPARATOR . $filename;
 
         $image = imagecreatetruecolor($width, $height);
 
-        imagealphablending($image, false);
-        imagesavealpha($image, true);
-
-        $transparent = imagecolorallocatealpha(
-            $image,
-            0,
-            0,
-            0,
-            127
-        );
-
-        imagefill($image, 0, 0, $transparent);
-
-        $color = imagecolorallocatealpha(
-            $image,
-            0,
-            0,
-            0,
-            0
-        );
-
-        imagefilledrectangle(
-            $image,
-            10,
-            10,
-            $width - 10,
-            $height - 10,
-            $color
-        );
-
-        imagepng($image, $filepath);
-
-        imagedestroy($image);
-
-        return $filepath;
-    }
-
-    private function createBmpOverlay(string $filename): string
-    {
-        $filepath = $this->watermarkDirectory .DIRECTORY_SEPARATOR .$filename;
-
-        $image = imagecreatetruecolor(50, 50);
-
-        $color = imagecolorallocate($image, 0, 0, 0);
-
-        imagefill($image, 0, 0, $color);
-
-        imagebmp($image, $filepath);
-
-        imagedestroy($image);
-
-        return $filepath;
-    }
-
-    private function createImage(string $filename, int $width, int $height): string
-    {
-        $filepath = $this->sourceDirectory .DIRECTORY_SEPARATOR .$filename;
-
-        $image = imagecreatetruecolor($width, $height);
-
-        $background = imagecolorallocate(
-            $image,
-            255,
-            255,
-            255
-        );
+        $background = imagecolorallocate($image, 255, 255, 255);
 
         imagefill($image, 0, 0, $background);
 
@@ -684,13 +373,67 @@ final class ImageWatermarkerTest extends TestCase
         return $filepath;
     }
 
-    private function createTextFile(string $filename): string
+    private function createWatermarkImage(string $filename, int $width = 100, int $height = 100): string
     {
-        $filepath = $this->watermarkDirectory .DIRECTORY_SEPARATOR .$filename;
+        $filepath = $this->directory . DIRECTORY_SEPARATOR . $filename;
 
-        file_put_contents($filepath, 'test');
+        $image = imagecreatetruecolor($width, $height);
+
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+
+        $transparent = imagecolorallocatealpha(
+            $image,
+            255,
+            255,
+            255,
+            127
+        );
+
+        imagefill($image, 0, 0, $transparent);
+
+        $red = imagecolorallocatealpha(
+            $image,
+            255,
+            0,
+            0,
+            0
+        );
+
+        imagefilledrectangle(
+            $image,
+            20,
+            20,
+            $width - 1,
+            $height - 1,
+            $red
+        );
+
+        imagepng($image, $filepath);
+
+        imagedestroy($image);
 
         return $filepath;
+    }
+
+    private function getImageContent(string $filepath): string
+    {
+        $content = file_get_contents($filepath);
+
+        self::assertIsString($content);
+
+        return $content;
+    }
+
+    private function getPixel(string $filepath, int $x, int $y): int
+    {
+        $image = imagecreatefromjpeg($filepath);
+
+        try {
+            return imagecolorat($image, $x, $y);
+        } finally {
+            imagedestroy($image);
+        }
     }
 
     private function removeDirectory(string $directory): void
@@ -699,18 +442,18 @@ final class ImageWatermarkerTest extends TestCase
             return;
         }
 
-        $files = scandir($directory);
+        $items = scandir($directory);
 
-        if ($files === false) {
+        if ($items === false) {
             return;
         }
 
-        foreach ($files as $file) {
-            if ($file === '.' || $file === '..') {
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
                 continue;
             }
 
-            $filepath = $directory .DIRECTORY_SEPARATOR .$file;
+            $filepath = $directory . DIRECTORY_SEPARATOR . $item;
 
             if (is_dir($filepath) === true) {
                 $this->removeDirectory($filepath);

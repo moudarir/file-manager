@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Moudarir\FileManager\Image;
 
+use Moudarir\File\Exceptions\FileResourceException;
+use Moudarir\File\Exceptions\MimeDetectionException;
+use Moudarir\File\File;
+use Moudarir\FileManager\Collections\ThumbCollection;
 use Moudarir\FileManager\Exceptions\FileManagerException;
 use Moudarir\FileManager\Helpers\CommandLineHelper;
 use Moudarir\FileManager\Helpers\Common;
@@ -42,11 +46,13 @@ final readonly class ImageResizer
             }
 
             $sourceFilepath = $file->filepath();
+            $date = $config->customDate !== null ? $config->customDate : $file->createdAt();
+            $thumbCollection = [];
 
             foreach ($thumbs as $thumb => $dimensions) {
                 $directory = Common::makeDirectory(
                     $resizePath,
-                    $config->customDate !== null ? $config->customDate : $file->createdAt(),
+                    $date,
                     $config->dateFormat,
                     $thumb
                 );
@@ -70,24 +76,31 @@ final readonly class ImageResizer
                     $config->resizeQuality,
                 )->process();
 
-                if ($thumb === 'large') {
-                    $file
-                        ->changeDirname($directory)
-                        ->changeFilepath($destinationFilepath)
-                        ->changeFilesize(@filesize($destinationFilepath) ?: 0);
-
-                    if ($file->imageWidth() !== $width || $file->imageHeight() !== $height) {
-                        if (($dimensions = @getimagesize($destinationFilepath)) === false) {
-                            throw FileManagerException::invalidImage();
-                        }
-
-                        $file->changeImageDimensions([
-                            'width' => $dimensions[0],
-                            'height' => $dimensions[1],
-                            'htmlAttributes' => $dimensions[3],
-                        ]);
-                    }
+                try {
+                    $destinationFile = File::create($destinationFilepath, $file->mimeType());
+                } catch (FileResourceException|MimeDetectionException $exception) {
+                    throw FileManagerException::generic($exception->getMessage(), $exception);
                 }
+
+                if (($dimensions = @getimagesize($destinationFilepath)) === false) {
+                    throw FileManagerException::invalidImage();
+                }
+
+                $thumbCollection[$thumb] = UploadedFile::create(
+                    $destinationFile->resource(),
+                    $file->mimeType(),
+                    $file->originalName(),
+                    $date,
+                    [
+                        'width' => $dimensions[0],
+                        'height' => $dimensions[1],
+                        'htmlAttributes' => $dimensions[3],
+                    ],
+                );
+            }
+
+            if ($thumbCollection !== []) {
+                $file->setThumbCollection(new ThumbCollection($thumbCollection));
             }
 
             if ($config->removeAfterResize === true && is_file($sourceFilepath) === true) {

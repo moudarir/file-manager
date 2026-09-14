@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Moudarir\FileManager;
 
 use Moudarir\FileManager\Exceptions\FileManagerException;
+use Moudarir\FileManager\Helpers\Common;
 use Moudarir\FileManager\Image\ImageConvertConfig;
 use Moudarir\FileManager\Image\ImageCropConfig;
 use Moudarir\FileManager\Image\ImageResizeConfig;
@@ -66,7 +67,7 @@ final class FileManagerConfig
             throw FileManagerException::missingConfig();
         }
 
-        return new self(self::prepareConfig($config), $config);
+        return new self(Common::prepareConfig(self::DEFAULT_CONFIG, $config), $config);
     }
 
     /**
@@ -143,20 +144,6 @@ final class FileManagerConfig
         }
 
         if (
-            is_string($this->config['resizePath']) === false ||
-            trim($this->config['resizePath']) === ''
-        ) {
-            throw FileManagerException::invalidParam('resizePath');
-        }
-
-        if (
-            is_array($this->config['thumbs']) === false ||
-            $this->config['thumbs'] === []
-        ) {
-            throw FileManagerException::missingParam('thumbs');
-        }
-
-        if (
             is_array($this->config['watermarks']) === false ||
             $this->config['watermarks'] === []
         ) {
@@ -174,18 +161,5 @@ final class FileManagerConfig
     public function getProvidedConfig(): array
     {
         return $this->providedConfig;
-    }
-
-    private static function prepareConfig(array $provided): array
-    {
-        $defaults = self::DEFAULT_CONFIG;
-
-        foreach ($defaults as $key => $value) {
-            if (array_key_exists($key, $provided)) {
-                $defaults[$key] = $provided[$key];
-            }
-        }
-
-        return $defaults;
     }
 }

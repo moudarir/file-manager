@@ -37,7 +37,9 @@ final class FileManagerTest extends TestCase
         $manager = $this->createFileManager();
 
         $this->expectException(FileManagerException::class);
-        $this->expectExceptionMessageIsOrContains('The `upload()` method is mandatory before calling `files()`.');
+        $this->expectExceptionMessageIsOrContains(
+            'The `upload()` method is mandatory before calling `files()`.'
+        );
 
         $manager->files();
     }
@@ -138,23 +140,22 @@ final class FileManagerTest extends TestCase
         $file = $files->first();
 
         self::assertNotNull($file);
-        self::assertFileExists($file->filepath());
-        self::assertSame(400, $file->imageWidth());
-        self::assertSame(300, $file->imageHeight());
+
+        $thumb = $file->thumbCollection()->get('large');
+
+        self::assertFileExists($thumb->filepath());
+        self::assertSame(400, $thumb->imageWidth());
+        self::assertSame(300, $thumb->imageHeight());
     }
 
     #[Test]
-    public function itSkipsWatermarkWhenResizeIsNotRequested(): void
+    public function itAppliesWatermarkToOriginalWithoutResize(): void
     {
         $source = $this->createJpeg('source.jpg');
         $watermark = $this->createPng('watermark.png');
 
         $manager = $this->createFileManager([
-            'resizePath' => $this->directory.DIRECTORY_SEPARATOR.'resize',
-            'thumbs' => [
-                'large' => ['width' => 400, 'height' => 400],
-            ],
-            'watermarks' => $this->watermarks($watermark),
+            'watermarks' => $this->watermarks(['original' => $watermark]),
         ]);
 
         $files = $manager
@@ -169,6 +170,44 @@ final class FileManagerTest extends TestCase
         self::assertNotNull($file);
         self::assertSame(800, $file->imageWidth());
         self::assertSame(600, $file->imageHeight());
+
+        self::assertNotSame(
+            $this->getImageContent($source),
+            $this->getImageContent($file->filepath())
+        );
+    }
+
+    #[Test]
+    public function itSkipsThumbnailWatermarkWhenResizeIsNotRequested(): void
+    {
+        $source = $this->createJpeg('source.jpg');
+        $watermark = $this->createPng('watermark.png');
+
+        $manager = $this->createFileManager([
+            'resizePath' => $this->directory.DIRECTORY_SEPARATOR.'resize',
+            'thumbs' => [
+                'large' => ['width' => 400, 'height' => 400],
+            ],
+            'watermarks' => $this->watermarks(['large' => $watermark]),
+        ]);
+
+        $files = $manager
+            ->upload($source)
+            ->watermark()
+            ->files();
+
+        self::assertCount(1, $files);
+
+        $file = $files->first();
+
+        self::assertNotNull($file);
+        self::assertSame(800, $file->imageWidth());
+        self::assertSame(600, $file->imageHeight());
+
+        self::assertSame(
+            $this->getImageContent($file->filepath()),
+            $this->getImageContent($source)
+        );
     }
 
     #[Test]
@@ -182,7 +221,7 @@ final class FileManagerTest extends TestCase
             'thumbs' => [
                 'large' => ['width' => 400, 'height' => 400],
             ],
-            'watermarks' => $this->watermarks($watermark),
+            'watermarks' => $this->watermarks(['large' => $watermark]),
         ]);
 
         $files = $manager
@@ -196,9 +235,119 @@ final class FileManagerTest extends TestCase
         $file = $files->first();
 
         self::assertNotNull($file);
-        self::assertFileExists($file->filepath());
-        self::assertSame(400, $file->imageWidth());
-        self::assertSame(300, $file->imageHeight());
+
+        $thumb = $file->thumbCollection()->get('large');
+
+        self::assertFileExists($thumb->filepath());
+        self::assertSame(400, $thumb->imageWidth());
+        self::assertSame(300, $thumb->imageHeight());
+
+        self::assertNotSame(
+            $this->getImageContent($source),
+            $this->getImageContent($thumb->filepath())
+        );
+    }
+
+    #[Test]
+    public function itAppliesWatermarkToOriginalAndThumbnails(): void
+    {
+        $source = $this->createJpeg('source.jpg');
+        $originalWatermark = $this->createPng('original-watermark.png');
+        $largeWatermark = $this->createPng('large-watermark.png');
+        $mediumWatermark = $this->createPng('medium-watermark.png');
+
+        $manager = $this->createFileManager([
+            'resizePath' => $this->directory.DIRECTORY_SEPARATOR.'resize',
+            'thumbs' => [
+                'large' => ['width' => 400, 'height' => 400],
+                'medium' => ['width' => 200, 'height' => 200],
+            ],
+            'watermarks' => $this->watermarks([
+                'original' => $originalWatermark,
+                'large' => $largeWatermark,
+                'medium' => $mediumWatermark,
+            ]),
+        ]);
+
+        $files = $manager
+            ->upload($source)
+            ->resize()
+            ->watermark()
+            ->files();
+
+        self::assertCount(1, $files);
+
+        $file = $files->first();
+
+        self::assertNotNull($file);
+
+        self::assertNotSame(
+            $this->getImageContent($source),
+            $this->getImageContent($file->filepath())
+        );
+
+        $thumbCollection = $file->thumbCollection();
+
+        self::assertNotNull($thumbCollection);
+
+        $large = $thumbCollection->get('large');
+        $medium = $thumbCollection->get('medium');
+
+        self::assertFileExists($large->filepath());
+        self::assertFileExists($medium->filepath());
+
+        self::assertSame(400, $large->imageWidth());
+        self::assertSame(300, $large->imageHeight());
+
+        self::assertSame(200, $medium->imageWidth());
+        self::assertSame(150, $medium->imageHeight());
+    }
+
+    #[Test]
+    public function itAppliesWatermarkOnlyToConfiguredThumbnails(): void
+    {
+        $source = $this->createJpeg('source.jpg');
+        $watermark = $this->createPng('watermark.png');
+
+        $manager = $this->createFileManager([
+            'resizePath' => $this->directory.DIRECTORY_SEPARATOR.'resize',
+            'thumbs' => [
+                'large' => ['width' => 400, 'height' => 400],
+                'medium' => ['width' => 200, 'height' => 200],
+            ],
+            'watermarks' => $this->watermarks(['large' => $watermark]),
+        ]);
+
+        $files = $manager
+            ->upload($source)
+            ->resize()
+            ->watermark()
+            ->files();
+
+        self::assertCount(1, $files);
+
+        $file = $files->first();
+
+        self::assertNotNull($file);
+
+        $thumbCollection = $file->thumbCollection();
+
+        self::assertNotNull($thumbCollection);
+
+        self::assertTrue($thumbCollection->has('large'));
+        self::assertTrue($thumbCollection->has('medium'));
+
+        $large = $thumbCollection->get('large');
+        $medium = $thumbCollection->get('medium');
+
+        self::assertFileExists($large->filepath());
+        self::assertFileExists($medium->filepath());
+
+        self::assertSame(400, $large->imageWidth());
+        self::assertSame(300, $large->imageHeight());
+
+        self::assertSame(200, $medium->imageWidth());
+        self::assertSame(150, $medium->imageHeight());
     }
 
     #[Test]
@@ -248,29 +397,28 @@ final class FileManagerTest extends TestCase
         $file = $files->first();
 
         self::assertNotNull($file);
-        self::assertSame(MimeType::WEBP, $file->mimeType());
-        self::assertSame('webp', $file->extension());
-        self::assertSame('source.webp', $file->basename());
 
-        self::assertFileExists(
-            $this->directory
-            .DIRECTORY_SEPARATOR
-            .'resize'
-            .DIRECTORY_SEPARATOR
-            .'large'
-            .DIRECTORY_SEPARATOR
-            .'source.webp'
-        );
+        self::assertSame(MimeType::JPEG, $file->mimeType());
+        self::assertSame('jpg', $file->extension());
+        self::assertSame('source.jpg', $file->basename());
+        self::assertFileExists($file->filepath());
 
-        self::assertFileExists(
-            $this->directory
-            .DIRECTORY_SEPARATOR
-            .'resize'
-            .DIRECTORY_SEPARATOR
-            .'medium'
-            .DIRECTORY_SEPARATOR
-            .'source.webp'
-        );
+        $thumbCollection = $file->thumbCollection();
+
+        self::assertNotNull($thumbCollection);
+
+        $large = $thumbCollection->get('large');
+        $medium = $thumbCollection->get('medium');
+
+        self::assertSame(MimeType::WEBP, $large->mimeType());
+        self::assertSame('webp', $large->extension());
+        self::assertSame('source.webp', $large->basename());
+        self::assertFileExists($large->filepath());
+
+        self::assertSame(MimeType::WEBP, $medium->mimeType());
+        self::assertSame('webp', $medium->extension());
+        self::assertSame('source.webp', $medium->basename());
+        self::assertFileExists($medium->filepath());
     }
 
     #[Test]
@@ -285,7 +433,12 @@ final class FileManagerTest extends TestCase
                 'large' => ['width' => 400, 'height' => 400],
                 'medium' => ['width' => 200, 'height' => 200],
             ],
-            'watermarks' => $this->watermarks($watermark),
+            'cropRatioWidth' => 600,
+            'cropRatioHeight' => 600,
+            'watermarks' => $this->watermarks([
+                'large' => $watermark,
+                'medium' => $watermark,
+            ]),
         ]);
 
         $files = $manager
@@ -302,29 +455,34 @@ final class FileManagerTest extends TestCase
 
         self::assertNotNull($file);
         self::assertFileExists($file->filepath());
-        self::assertSame(MimeType::WEBP, $file->mimeType());
-        self::assertSame('webp', $file->extension());
-        self::assertSame('source.webp', $file->basename());
 
-        self::assertFileExists(
-            $this->directory
-            .DIRECTORY_SEPARATOR
-            .'resize'
-            .DIRECTORY_SEPARATOR
-            .'large'
-            .DIRECTORY_SEPARATOR
-            .'source.webp'
-        );
+        self::assertSame(MimeType::JPEG, $file->mimeType());
+        self::assertSame('jpg', $file->extension());
+        self::assertSame('source.jpg', $file->basename());
 
-        self::assertFileExists(
-            $this->directory
-            .DIRECTORY_SEPARATOR
-            .'resize'
-            .DIRECTORY_SEPARATOR
-            .'medium'
-            .DIRECTORY_SEPARATOR
-            .'source.webp'
-        );
+        self::assertSame(600, $file->imageWidth());
+        self::assertSame(600, $file->imageHeight());
+
+        $thumbCollection = $file->thumbCollection();
+
+        self::assertNotNull($thumbCollection);
+
+        $large = $thumbCollection->get('large');
+        $medium = $thumbCollection->get('medium');
+
+        self::assertSame(MimeType::WEBP, $large->mimeType());
+        self::assertSame('webp', $large->extension());
+        self::assertSame('source.webp', $large->basename());
+        self::assertFileExists($large->filepath());
+        self::assertSame(400, $large->imageWidth());
+        self::assertSame(400, $large->imageHeight());
+
+        self::assertSame(MimeType::WEBP, $medium->mimeType());
+        self::assertSame('webp', $medium->extension());
+        self::assertSame('source.webp', $medium->basename());
+        self::assertFileExists($medium->filepath());
+        self::assertSame(200, $medium->imageWidth());
+        self::assertSame(200, $medium->imageHeight());
     }
 
     private function createFileManager(array $config = []): FileManager
@@ -358,18 +516,16 @@ final class FileManagerTest extends TestCase
         ], JSON_THROW_ON_ERROR);
     }
 
-    private function watermarks(string $overlayFilepath): array
+    private function watermarks(array $watermarks): array
     {
-        return [
-            'large' => [
-                'overlayFilepath' => $overlayFilepath,
-                'verticalAlignment' => WatermarkAlignment::V_BOTTOM,
-                'horizontalAlignment' => WatermarkAlignment::H_RIGHT,
-                'opacity' => 10,
-                'xTransparency' => 5,
-                'yTransparency' => 5,
-            ],
-        ];
+        return array_map(fn ($overlayFilepath) => [
+            'overlayFilepath' => $overlayFilepath,
+            'verticalAlignment' => WatermarkAlignment::V_BOTTOM,
+            'horizontalAlignment' => WatermarkAlignment::H_RIGHT,
+            'opacity' => 10,
+            'xTransparency' => 5,
+            'yTransparency' => 5,
+        ], $watermarks);
     }
 
     private function createJpeg(string $filename, int $width = 800, int $height = 600): string
@@ -378,6 +534,9 @@ final class FileManagerTest extends TestCase
 
         $image = imagecreatetruecolor($width, $height);
 
+        $background = imagecolorallocate($image, 255, 255, 255);
+
+        imagefill($image, 0, 0, $background);
         imagejpeg($image, $filepath, 90);
 
         imagedestroy($image);
@@ -404,11 +563,37 @@ final class FileManagerTest extends TestCase
 
         imagefill($image, 0, 0, $transparent);
 
+        $red = imagecolorallocatealpha(
+            $image,
+            255,
+            0,
+            0,
+            0
+        );
+
+        imagefilledrectangle(
+            $image,
+            20,
+            20,
+            $width - 1,
+            $height - 1,
+            $red
+        );
+
         imagepng($image, $filepath);
 
         imagedestroy($image);
 
         return $filepath;
+    }
+
+    private function getImageContent(string $filepath): string
+    {
+        $content = file_get_contents($filepath);
+
+        self::assertIsString($content);
+
+        return $content;
     }
 
     private function removeDirectory(string $directory): void

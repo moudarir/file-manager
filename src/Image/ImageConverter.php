@@ -7,12 +7,12 @@ namespace Moudarir\FileManager\Image;
 use Moudarir\File\Enum\MimeType;
 use Moudarir\FileManager\Exceptions\FileManagerException;
 use Moudarir\FileManager\Helpers\CommandLineHelper;
-use Moudarir\FileManager\Helpers\Common;
-use Moudarir\FileManager\Upload\UploadedFile;
 use Moudarir\FileManager\Upload\UploadedFileCollection;
 
 final readonly class ImageConverter
 {
+
+    private const string WEBP_EXTENSION = 'webp';
 
     /**
      * @throws FileManagerException
@@ -22,12 +22,7 @@ final readonly class ImageConverter
         ImageConvertConfig $config,
     ): void
     {
-        $thumbs = $config->thumbs;
-
-        /**
-         * @var UploadedFile $file
-         */
-        foreach ($uploadedFileCollection as $file) {
+        foreach ($uploadedFileCollection->all() as $file) {
             if ($file->isImage() === false) {
                 continue;
             }
@@ -37,57 +32,53 @@ final readonly class ImageConverter
                 continue;
             }
 
-            $filesToConvert = [];
+            $thumbCollection = $file->thumbCollection();
+            $files = $thumbCollection !== null && $thumbCollection->isEmpty() === false
+                ? $thumbCollection->all()
+                : [$file];
 
-            if ($thumbs !== []) {
-                foreach ($thumbs as $thumb) {
-                    $directory = Common::buildDirectoryPath(
-                        $config->resizePath,
-                        $config->customDate !== null ? $config->customDate : $file->createdAt(),
-                        $config->dateFormat,
-                        $thumb
-                    );
+            $sourcesToDelete = [];
+            $convertedFiles = [];
+            $convertedUploadedFiles = [];
 
-                    $filesToConvert[$thumb] = [
-                        'source' => $directory . $file->basename(),
-                        'destination' => $directory . $file->filename() . '.webp',
-                    ];
-                }
-            } else {
-                $filesToConvert['large'] = [
-                    'source' => $file->filepath(),
-                    'destination' => $file->dirname() . DIRECTORY_SEPARATOR . $file->filename() . '.webp',
-                ];
-            }
+            foreach ($files as $fileToConvert) {
+                $source = $fileToConvert->filepath();
+                $basename = $fileToConvert->filename() . '.' . self::WEBP_EXTENSION;
+                $destination = $fileToConvert->dirname() . DIRECTORY_SEPARATOR . $basename;
 
-            if (self::process($filesToConvert) === true) {
-                $newFilepath = $filesToConvert['large']['destination'];
+                self::process($source, $destination, $convertedFiles);
 
-                if (($filesize = filesize($newFilepath)) === false) {
-                    foreach ($filesToConvert as $original) {
-                        if (is_file($original['destination']) === true) {
-                            unlink($original['destination']);
-                        }
-                    }
+                if (($filesize = filesize($destination)) === false) {
+                    self::purgeOnError([...$convertedFiles, $destination]);
 
                     throw FileManagerException::imageConvertFailed();
                 }
 
-                $file
-                    ->markAsConverted()
-                    ->changeFilepath($newFilepath)
-                    ->changeBasename($file->filename().'.webp')
-                    ->changeExtension('webp')
-                    ->changeMimeType(MimeType::WEBP)
-                    ->changeFilesize($filesize);
+                $convertedFiles[] = $destination;
+                $sourcesToDelete[] = $source;
+                $convertedUploadedFiles[] = [
+                    'convertedFile' => $fileToConvert,
+                    'destination' => $destination,
+                    'basename' => $basename,
+                    'filesize' => $filesize,
+                ];
+            }
 
-                if ($config->removeAfterConvert === true) {
-                    foreach ($filesToConvert as $original) {
-                        if (is_file($original['source']) === true) {
-                            unlink($original['source']);
-                        }
-                    }
+            if ($convertedUploadedFiles !== []) {
+                foreach ($convertedUploadedFiles as $converted) {
+                    $convertedFile = $converted['convertedFile'];
+                    $convertedFile
+                        ->markAsConverted()
+                        ->changeFilepath($converted['destination'])
+                        ->changeBasename($converted['basename'])
+                        ->changeExtension(self::WEBP_EXTENSION)
+                        ->changeMimeType(MimeType::WEBP)
+                        ->changeFilesize($converted['filesize']);
                 }
+            }
+
+            if ($config->removeAfterConvert === true) {
+                self::removeSources($sourcesToDelete);
             }
         }
     }
@@ -95,48 +86,49 @@ final readonly class ImageConverter
     /**
      * @throws FileManagerException
      */
-    private static function process(array $filesToConvert): bool
+    private static function process(string $source, string $destination, array $convertedFiles = []): void
     {
-        if ($filesToConvert === []) {
-            return false;
+        $command = CommandLineHelper::buildImageMagickCommand(
+            $source,
+            'webp:'.$destination,
+            [
+                "-quality '75'",
+                '-strip',
+                '-define webp:alpha-quality=90',
+                '-define webp:method=5',
+            ]
+        );
+
+        if (
+            CommandLineHelper::executeCommand($command) === false ||
+            is_file($destination) === false
+        ) {
+            self::purgeOnError($convertedFiles);
+            throw FileManagerException::imageConvertFailed();
         }
+    }
 
-        $convertedFiles = [];
-
-        foreach ($filesToConvert as $fileToConvert) {
-            $sourceFilepath = $fileToConvert['source'];
-            $destinationFilepath = $fileToConvert['destination'];
-
-            $command = CommandLineHelper::buildImageMagickCommand(
-                $sourceFilepath,
-                'webp:'.$destinationFilepath,
-                [
-                    "-quality '75'",
-                    '-strip',
-                    '-define webp:alpha-quality=90',
-                    '-define webp:method=5',
-                ]
-            );
-
-            if (
-                CommandLineHelper::executeCommand($command) === false ||
-                is_file($destinationFilepath) === false
-            ) {
-                if ($convertedFiles !== []) {
-                    foreach ($convertedFiles as $filepath) {
-                        if (is_file($filepath) === true) {
-                            unlink($filepath);
-                        }
-                    }
-                }
-
-                throw FileManagerException::imageConvertFailed();
+    /**
+     * @param string[] $sources
+     */
+    private static function removeSources(array $sources): void
+    {
+        foreach ($sources as $source) {
+            if (is_file($source) === true) {
+                unlink($source);
             }
-
-            $convertedFiles[] = $destinationFilepath;
-            @chmod($destinationFilepath, 0644);
         }
+    }
 
-        return true;
+    /**
+     * @param string[] $convertedFiles
+     */
+    private static function purgeOnError(array $convertedFiles): void
+    {
+        foreach ($convertedFiles as $filepath) {
+            if (is_file($filepath) === true) {
+                unlink($filepath);
+            }
+        }
     }
 }

@@ -7,6 +7,7 @@ namespace Moudarir\FileManager\Tests\Unit\Image;
 use DateTimeImmutable;
 use Moudarir\File\Enum\MimeType;
 use Moudarir\File\FileResource;
+use Moudarir\FileManager\Collections\ThumbCollection;
 use Moudarir\FileManager\Exceptions\FileManagerException;
 use Moudarir\FileManager\Image\ImageConvertConfig;
 use Moudarir\FileManager\Image\ImageConverter;
@@ -46,13 +47,7 @@ final class ImageConverterTest extends TestCase
 
         ImageConverter::create(
             new UploadedFileCollection('file', [$uploadedFile]),
-            ImageConvertConfig::create([
-                'removeAfterConvert' => false,
-                'thumbs' => [],
-                'resizePath' => null,
-                'dateFormat' => null,
-                'customDate' => null,
-            ])
+            ImageConvertConfig::create(['removeAfterConvert' => false])
         );
 
         $destination = $this->directory.DIRECTORY_SEPARATOR.'picture.webp';
@@ -83,45 +78,74 @@ final class ImageConverterTest extends TestCase
         mkdir($mediumDirectory, 0777, true);
         mkdir($smallDirectory, 0777, true);
 
-        $this->createJpeg('picture.jpg', $largeDirectory);
+        $originalSource = $this->createJpeg('picture.jpg');
 
-        $this->createJpeg('picture.jpg', $mediumDirectory);
+        $largeSource = $this->createJpeg('picture.jpg', $largeDirectory);
+        $mediumSource = $this->createJpeg('picture.jpg', $mediumDirectory);
+        $smallSource = $this->createJpeg('picture.jpg', $smallDirectory);
 
-        $this->createJpeg('picture.jpg', $smallDirectory);
+        $large = $this->createUploadedFile($largeSource, $createdAt);
+        $medium = $this->createUploadedFile($mediumSource, $createdAt);
+        $small = $this->createUploadedFile($smallSource, $createdAt);
 
-        $uploadedFile = $this->createUploadedFile(
-            $largeDirectory.DIRECTORY_SEPARATOR.'picture.jpg',
-            $createdAt
+        $uploadedFile = $this->createUploadedFile($originalSource, $createdAt);
+
+        $uploadedFile->setThumbCollection(
+            new ThumbCollection([
+                'large' => $large,
+                'medium' => $medium,
+                'small' => $small,
+            ])
         );
 
         ImageConverter::create(
             new UploadedFileCollection('file', [$uploadedFile]),
-            ImageConvertConfig::create([
-                'removeAfterConvert' => false,
-                'thumbs' => ['large', 'medium', 'small'],
-                'resizePath' => $this->directory,
-                'dateFormat' => null,
-                'customDate' => null,
-            ])
+            ImageConvertConfig::create(['removeAfterConvert' => false])
         );
 
-        self::assertFileExists($largeDirectory.DIRECTORY_SEPARATOR.'picture.webp');
-        self::assertFileExists($mediumDirectory.DIRECTORY_SEPARATOR.'picture.webp');
-        self::assertFileExists($smallDirectory.DIRECTORY_SEPARATOR.'picture.webp');
+        $largeDestination = $largeDirectory.DIRECTORY_SEPARATOR.'picture.webp';
+        $mediumDestination = $mediumDirectory.DIRECTORY_SEPARATOR.'picture.webp';
+        $smallDestination = $smallDirectory.DIRECTORY_SEPARATOR.'picture.webp';
 
-        self::assertFileExists($largeDirectory.DIRECTORY_SEPARATOR.'picture.jpg');
-        self::assertFileExists($mediumDirectory.DIRECTORY_SEPARATOR.'picture.jpg');
-        self::assertFileExists($smallDirectory.DIRECTORY_SEPARATOR.'picture.jpg');
+        self::assertFileExists($originalSource);
 
-        self::assertTrue($uploadedFile->converted());
-        self::assertSame(
-            $largeDirectory.DIRECTORY_SEPARATOR.'picture.webp',
-            $uploadedFile->filepath()
-        );
-        self::assertSame('picture.webp', $uploadedFile->basename());
-        self::assertSame('picture', $uploadedFile->filename());
-        self::assertSame('webp', $uploadedFile->extension());
-        self::assertSame(MimeType::WEBP, $uploadedFile->mimeType());
+        self::assertFileExists($largeDestination);
+        self::assertFileExists($mediumDestination);
+        self::assertFileExists($smallDestination);
+
+        self::assertFileExists($largeSource);
+        self::assertFileExists($mediumSource);
+        self::assertFileExists($smallSource);
+
+        self::assertFalse($uploadedFile->converted());
+        self::assertSame($originalSource, $uploadedFile->filepath());
+        self::assertSame('picture.jpg', $uploadedFile->basename());
+        self::assertSame('jpg', $uploadedFile->extension());
+        self::assertSame(MimeType::JPEG, $uploadedFile->mimeType());
+
+        self::assertTrue($large->converted());
+        self::assertSame($largeDestination, $large->filepath());
+        self::assertSame('picture.webp', $large->basename());
+        self::assertSame('picture', $large->filename());
+        self::assertSame('webp', $large->extension());
+        self::assertSame(MimeType::WEBP, $large->mimeType());
+        self::assertSame(filesize($largeDestination), $large->filesize());
+
+        self::assertTrue($medium->converted());
+        self::assertSame($mediumDestination, $medium->filepath());
+        self::assertSame('picture.webp', $medium->basename());
+        self::assertSame('picture', $medium->filename());
+        self::assertSame('webp', $medium->extension());
+        self::assertSame(MimeType::WEBP, $medium->mimeType());
+        self::assertSame(filesize($mediumDestination), $medium->filesize());
+
+        self::assertTrue($small->converted());
+        self::assertSame($smallDestination, $small->filepath());
+        self::assertSame('picture.webp', $small->basename());
+        self::assertSame('picture', $small->filename());
+        self::assertSame('webp', $small->extension());
+        self::assertSame(MimeType::WEBP, $small->mimeType());
+        self::assertSame(filesize($smallDestination), $small->filesize());
     }
 
     #[Test]
@@ -132,19 +156,14 @@ final class ImageConverterTest extends TestCase
 
         ImageConverter::create(
             new UploadedFileCollection('file', [$uploadedFile]),
-            ImageConvertConfig::create([
-                'removeAfterConvert' => false,
-                'thumbs' => [],
-                'resizePath' => null,
-                'dateFormat' => null,
-                'customDate' => null,
-            ])
+            ImageConvertConfig::create(['removeAfterConvert' => false])
         );
 
         self::assertFileExists($source);
         self::assertTrue($uploadedFile->converted());
         self::assertSame($source, $uploadedFile->filepath());
         self::assertSame('picture.webp', $uploadedFile->basename());
+        self::assertSame('picture', $uploadedFile->filename());
         self::assertSame('webp', $uploadedFile->extension());
         self::assertSame(MimeType::WEBP, $uploadedFile->mimeType());
     }
@@ -160,13 +179,7 @@ final class ImageConverterTest extends TestCase
 
         ImageConverter::create(
             new UploadedFileCollection('file', [$uploadedFile]),
-            ImageConvertConfig::create([
-                'removeAfterConvert' => false,
-                'thumbs' => [],
-                'resizePath' => null,
-                'dateFormat' => null,
-                'customDate' => null,
-            ])
+            ImageConvertConfig::create(['removeAfterConvert' => false])
         );
 
         self::assertFileExists($source);
@@ -183,55 +196,71 @@ final class ImageConverterTest extends TestCase
 
         ImageConverter::create(
             new UploadedFileCollection('file', [$uploadedFile]),
-            ImageConvertConfig::create([
-                'removeAfterConvert' => true,
-                'thumbs' => [],
-                'resizePath' => null,
-                'dateFormat' => null,
-                'customDate' => null,
-            ])
+            ImageConvertConfig::create(['removeAfterConvert' => true])
         );
 
         $destination = $this->directory.DIRECTORY_SEPARATOR.'picture.webp';
 
         self::assertFileDoesNotExist($source);
         self::assertFileExists($destination);
+
         self::assertTrue($uploadedFile->converted());
         self::assertSame($destination, $uploadedFile->filepath());
+        self::assertSame('picture.webp', $uploadedFile->basename());
+        self::assertSame(MimeType::WEBP, $uploadedFile->mimeType());
     }
 
     #[Test]
     public function itRemovesAllSourcesAfterSuccessfulThumbConversions(): void
     {
+        $originalSource = $this->createJpeg('picture.jpg');
+
         $largeDirectory = $this->directory.DIRECTORY_SEPARATOR.'large';
         $mediumDirectory = $this->directory.DIRECTORY_SEPARATOR.'medium';
+        $smallDirectory = $this->directory.DIRECTORY_SEPARATOR.'small';
 
         mkdir($largeDirectory, 0777, true);
         mkdir($mediumDirectory, 0777, true);
+        mkdir($smallDirectory, 0777, true);
 
         $largeSource = $this->createJpeg('picture.jpg', $largeDirectory);
         $mediumSource = $this->createJpeg('picture.jpg', $mediumDirectory);
+        $smallSource = $this->createJpeg('picture.jpg', $smallDirectory);
 
-        $uploadedFile = $this->createUploadedFile($largeSource);
+        $uploadedFile = $this->createUploadedFile($originalSource);
 
-        ImageConverter::create(
-            new UploadedFileCollection('file', [$uploadedFile]),
-            ImageConvertConfig::create([
-                'removeAfterConvert' => true,
-                'thumbs' => ['large', 'medium'],
-                'resizePath' => $this->directory,
-                'dateFormat' => null,
-                'customDate' => null,
+        $large = $this->createUploadedFile($largeSource);
+        $medium = $this->createUploadedFile($mediumSource);
+        $small = $this->createUploadedFile($smallSource);
+
+        $uploadedFile->setThumbCollection(
+            new ThumbCollection([
+                'large' => $large,
+                'medium' => $medium,
+                'small' => $small,
             ])
         );
 
+        ImageConverter::create(
+            new UploadedFileCollection('file', [$uploadedFile]),
+            ImageConvertConfig::create(['removeAfterConvert' => true])
+        );
+
+        self::assertFileExists($originalSource);
+
         self::assertFileDoesNotExist($largeSource);
         self::assertFileDoesNotExist($mediumSource);
+        self::assertFileDoesNotExist($smallSource);
 
         self::assertFileExists($largeDirectory.DIRECTORY_SEPARATOR.'picture.webp');
         self::assertFileExists($mediumDirectory.DIRECTORY_SEPARATOR.'picture.webp');
+        self::assertFileExists($smallDirectory.DIRECTORY_SEPARATOR.'picture.webp');
 
-        self::assertTrue($uploadedFile->converted());
+        self::assertFalse($uploadedFile->converted());
+
+        self::assertTrue($large->converted());
+        self::assertTrue($medium->converted());
+        self::assertTrue($small->converted());
     }
 
     #[Test]
@@ -243,26 +272,26 @@ final class ImageConverterTest extends TestCase
         mkdir($largeDirectory, 0777, true);
         mkdir($mediumDirectory, 0777, true);
 
+        $originalSource = $this->createJpeg('picture.jpg');
         $largeSource = $this->createJpeg('picture.jpg', $largeDirectory);
+        $mediumSource = $this->createJpeg('picture.jpg', $mediumDirectory);
 
-        $mediumSource = $mediumDirectory.DIRECTORY_SEPARATOR.'picture.jpg';
+        $uploadedFile = $this->createUploadedFile($originalSource);
+        $large = $this->createUploadedFile($largeSource);
+        $medium = $this->createUploadedFile($mediumSource);
 
-        /*
-         * The medium source deliberately does not exist.
-         * Large conversion must succeed first, then medium conversion
-         * must fail, causing the generated large WebP to be removed.
-         */
-        $uploadedFile = $this->createUploadedFile($largeSource);
+        $uploadedFile->setThumbCollection(
+            new ThumbCollection([
+                'large' => $large,
+                'medium' => $medium,
+            ])
+        );
+
+        unlink($mediumSource);
 
         $collection = new UploadedFileCollection('file', [$uploadedFile]);
 
-        $config = ImageConvertConfig::create([
-            'removeAfterConvert' => false,
-            'thumbs' => ['large', 'medium'],
-            'resizePath' => $this->directory,
-            'dateFormat' => null,
-            'customDate' => null,
-        ]);
+        $config = ImageConvertConfig::create(['removeAfterConvert' => false]);
 
         self::expectException(FileManagerException::class);
 
@@ -271,14 +300,21 @@ final class ImageConverterTest extends TestCase
         } finally {
             self::assertFileDoesNotExist($largeDirectory.DIRECTORY_SEPARATOR.'picture.webp');
 
+            self::assertFileExists($originalSource);
             self::assertFileExists($largeSource);
             self::assertFileDoesNotExist($mediumSource);
 
             self::assertFalse($uploadedFile->converted());
-            self::assertSame($largeSource, $uploadedFile->filepath());
+            self::assertSame($originalSource, $uploadedFile->filepath());
             self::assertSame('picture.jpg', $uploadedFile->basename());
             self::assertSame('jpg', $uploadedFile->extension());
             self::assertSame(MimeType::JPEG, $uploadedFile->mimeType());
+
+            self::assertFalse($large->converted());
+            self::assertSame($largeSource, $large->filepath());
+            self::assertSame('picture.jpg', $large->basename());
+            self::assertSame('jpg', $large->extension());
+            self::assertSame(MimeType::JPEG, $large->mimeType());
         }
     }
 
@@ -293,13 +329,7 @@ final class ImageConverterTest extends TestCase
 
         $collection = new UploadedFileCollection('file', [$uploadedFile]);
 
-        $config = ImageConvertConfig::create([
-            'removeAfterConvert' => false,
-            'thumbs' => [],
-            'resizePath' => null,
-            'dateFormat' => null,
-            'customDate' => null,
-        ]);
+        $config = ImageConvertConfig::create(['removeAfterConvert' => false,]);
 
         self::expectException(FileManagerException::class);
 

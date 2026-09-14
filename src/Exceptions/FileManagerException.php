@@ -112,6 +112,13 @@ class FileManagerException extends Exception
         return new static("The value of the property `$property` is invalid.");
     }
 
+    public static function invalidKeyValue(string $key): static
+    {
+        return new static(
+            sprintf("The value of the key `%s` is invalid.", $key)
+        );
+    }
+
     public static function unableReadPictureSource(): self
     {
         return new self("Unable to read the image source.");

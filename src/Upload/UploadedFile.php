@@ -7,9 +7,12 @@ namespace Moudarir\FileManager\Upload;
 use DateTimeInterface;
 use Moudarir\File\Enum\MimeType;
 use Moudarir\File\FileResource;
+use Moudarir\FileManager\Collections\ThumbCollection;
 
 final class UploadedFile
 {
+
+    private ?ThumbCollection $thumbCollection = null;
 
     private function __construct(
         private readonly string            $originalName,
@@ -150,6 +153,9 @@ final class UploadedFile
         return $this;
     }
 
+    /**
+     * @return array{width: int, height: int, htmlAttributes: string}|null
+     */
     public function imageDimensions(): ?array
     {
         return $this->imageDimensions;
@@ -179,6 +185,17 @@ final class UploadedFile
     public function markAsConverted(): self
     {
         $this->converted = true;
+        return $this;
+    }
+
+    public function thumbCollection(): ?ThumbCollection
+    {
+        return $this->thumbCollection;
+    }
+
+    public function setThumbCollection(ThumbCollection $thumbCollection): self
+    {
+        $this->thumbCollection = $thumbCollection;
         return $this;
     }
 }

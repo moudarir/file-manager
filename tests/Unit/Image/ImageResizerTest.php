@@ -140,7 +140,7 @@ final class ImageResizerTest extends TestCase
     }
 
     #[Test]
-    public function itUpdatesUploadedFileWithLargeThumbnailInformation(): void
+    public function itCreatesThumbCollectionWithLargeThumbnailInformation(): void
     {
         $sourceFilepath = $this->createImage('source.jpg', 1200, 800);
 
@@ -161,19 +161,26 @@ final class ImageResizerTest extends TestCase
             .DIRECTORY_SEPARATOR
             .$file->basename();
 
-        self::assertSame($expectedFilepath, $file->filepath());
-        self::assertSame(
-            dirname($expectedFilepath) . DIRECTORY_SEPARATOR,
-            $file->dirname()
-        );
-        self::assertSame(filesize($expectedFilepath), $file->filesize());
+        $thumbCollection = $file->thumbCollection();
 
-        self::assertSame(400, $file->imageWidth());
-        self::assertSame(267, $file->imageHeight());
+        self::assertNotNull($thumbCollection);
+
+        $thumb = $thumbCollection->get('large');
+
+        self::assertNotNull($thumb);
+        self::assertSame($expectedFilepath, $thumb->filepath());
+        self::assertSame(
+            dirname($expectedFilepath),
+            $thumb->dirname()
+        );
+        self::assertSame(filesize($expectedFilepath), $thumb->filesize());
+
+        self::assertSame(400, $thumb->imageWidth());
+        self::assertSame(267, $thumb->imageHeight());
     }
 
     #[Test]
-    public function itDoesNotUpdateUploadedFileWithMediumOrSmallThumbnailInformation(): void
+    public function itCreatesThumbCollectionWithMultipleThumbnails(): void
     {
         $sourceFilepath = $this->createImage('source.jpg', 1200, 800);
 
@@ -190,13 +197,19 @@ final class ImageResizerTest extends TestCase
             ])
         );
 
-        self::assertSame(
-            $this->resizeDirectory.DIRECTORY_SEPARATOR.'large'.DIRECTORY_SEPARATOR.$file->basename(),
-            $file->filepath()
-        );
+        $thumbCollection = $file->thumbCollection();
 
-        self::assertSame(400, $file->imageWidth());
-        self::assertSame(267, $file->imageHeight());
+        self::assertNotNull($thumbCollection);
+        self::assertCount(3, $thumbCollection);
+
+        self::assertSame(400, $thumbCollection->large->imageWidth());
+        self::assertSame(267, $thumbCollection->large->imageHeight());
+
+        self::assertSame(128, $thumbCollection->medium->imageWidth());
+        self::assertSame(85, $thumbCollection->medium->imageHeight());
+
+        self::assertSame(50, $thumbCollection->small->imageWidth());
+        self::assertSame(33, $thumbCollection->small->imageHeight());
     }
 
     #[Test]
@@ -270,8 +283,10 @@ final class ImageResizerTest extends TestCase
             ])
         );
 
-        self::assertFileDoesNotExist($sourceFilepath);
-        self::assertFileExists($file->filepath());
+        $thumb = $file->thumbCollection()->first();
+
+        self::assertFileDoesNotExist($file->filepath());
+        self::assertFileExists($thumb->filepath());
     }
 
     #[Test]
@@ -288,6 +303,7 @@ final class ImageResizerTest extends TestCase
             ])
         );
 
+        $thumb = $file->thumbCollection()->first();
         $datePath = $file->createdAt()->format('Y/m/d');
         $expectedFilepath = $this->resizeDirectory
             .DIRECTORY_SEPARATOR
@@ -295,10 +311,10 @@ final class ImageResizerTest extends TestCase
             .DIRECTORY_SEPARATOR
             .'large'
             .DIRECTORY_SEPARATOR
-            .$file->basename();
+            .$thumb->basename();
 
-        self::assertFileExists($expectedFilepath);
-        self::assertSame($expectedFilepath, $file->filepath());
+        self::assertFileExists($thumb->filepath());
+        self::assertSame($expectedFilepath, $thumb->filepath());
     }
 
     #[Test]
@@ -333,14 +349,17 @@ final class ImageResizerTest extends TestCase
             $this->createConfig()
         );
 
-        self::assertFileExists($firstFile->filepath());
-        self::assertFileExists($secondFile->filepath());
+        $firstFileThumb = $firstFile->thumbCollection()->first();
+        $secondFileThumb = $secondFile->thumbCollection()->first();
 
-        self::assertSame(400, $firstFile->imageWidth());
-        self::assertSame(267, $firstFile->imageHeight());
+        self::assertFileExists($firstFileThumb->filepath());
+        self::assertFileExists($secondFileThumb->filepath());
 
-        self::assertSame(267, $secondFile->imageWidth());
-        self::assertSame(400, $secondFile->imageHeight());
+        self::assertSame(400, $firstFileThumb->imageWidth());
+        self::assertSame(267, $firstFileThumb->imageHeight());
+
+        self::assertSame(267, $secondFileThumb->imageWidth());
+        self::assertSame(400, $secondFileThumb->imageHeight());
     }
 
     #[Test]

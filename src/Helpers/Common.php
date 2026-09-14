@@ -55,4 +55,15 @@ final class Common
 
         return $directory;
     }
+
+    public static function prepareConfig(array $defaults, array $provided): array
+    {
+        foreach ($defaults as $key => $value) {
+            if (array_key_exists($key, $provided)) {
+                $defaults[$key] = $provided[$key];
+            }
+        }
+
+        return $defaults;
+    }
 }

@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-09-14
+
+Introduce `ThumbCollection` to represent the thumbnails generated from an `UploadedFile` and make it available to the image processing modules.
+
+* add `ThumbCollection` as a named collection of `UploadedFile` instances
+* add `thumbCollection()` and `setThumbCollection()` to `UploadedFile`
+* update `ImageResizer` to create and attach a `ThumbCollection` containing the generated thumbnails
+* remove the dependency on a predefined thumbnail name such as `large`
+* update `ImageWatermarker` to process the original `UploadedFile` and/or thumbnails from `ThumbCollection` according to the watermark configuration
+* reserve the `original` watermark configuration key for the source image
+* update `FileManagerConfig` and `ImageWatermarkConfig` to support the new thumbnail and watermark processing model
+* update `FileManager` and image-processing tests accordingly
+* add dedicated tests for `ThumbCollection` and `ImageWatermarker`
+* update `FileManagerTest` to cover watermarking of originals and thumbnails
+* update `ImageConverter` to process the original `UploadedFile` and/or thumbnails from `ThumbCollection`
+* update conversion tests for original and thumbnail targets
+
+This establishes `ThumbCollection` as the common representation of generated thumbnails for subsequent image-processing modules.
+
+[1.2.0]: https://github.com/moudarir/file-manager/releases/tag/1.2.0
+
 ## [1.0.0] - 2026-09-10
 
 Initial stable release of `moudarir/file-manager`.

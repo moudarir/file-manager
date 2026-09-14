@@ -59,10 +59,10 @@ final class FileManager
 
         if ($this->resizeRequested === true) {
             ImageResizer::create($collection, $this->config->imageResizeConfig());
+        }
 
-            if ($this->watermarkRequested === true) {
-                ImageWatermarker::create($collection, $this->config->imageWatermarkConfig());
-            }
+        if ($this->watermarkRequested === true) {
+            ImageWatermarker::create($collection, $this->config->imageWatermarkConfig());
         }
 
         if ($this->convertRequested === true) {
