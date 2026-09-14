@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Moudarir\FileManager\Tests\Unit\Upload;
+namespace Moudarir\FileManager\Tests\Unit\Collections;
 
 use DateTimeImmutable;
 use Moudarir\File\Enum\MimeType;
 use Moudarir\File\File;
+use Moudarir\FileManager\Collections\UploadedFileCollection;
 use Moudarir\FileManager\Upload\UploadedFile;
-use Moudarir\FileManager\Upload\UploadedFileCollection;
 use PHPUnit\Framework\TestCase;
 
 final class UploadedFileCollectionTest extends TestCase

@@ -6,11 +6,11 @@ namespace Moudarir\FileManager\Tests\Unit\Image;
 
 use DateTimeImmutable;
 use Moudarir\File\File;
+use Moudarir\FileManager\Collections\UploadedFileCollection;
+use Moudarir\FileManager\Config\ImageResizeConfig;
 use Moudarir\FileManager\Exceptions\FileManagerException;
-use Moudarir\FileManager\Image\ImageResizeConfig;
 use Moudarir\FileManager\Image\ImageResizer;
 use Moudarir\FileManager\Upload\UploadedFile;
-use Moudarir\FileManager\Upload\UploadedFileCollection;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

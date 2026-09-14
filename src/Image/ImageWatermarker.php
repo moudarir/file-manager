@@ -6,10 +6,11 @@ namespace Moudarir\FileManager\Image;
 
 use GdImage;
 use Moudarir\File\Enum\MimeType;
+use Moudarir\FileManager\Collections\CollectionInterface;
+use Moudarir\FileManager\Config\ImageWatermarkConfig;
 use Moudarir\FileManager\Enums\WatermarkAlignment;
 use Moudarir\FileManager\Exceptions\FileManagerException;
 use Moudarir\FileManager\Upload\UploadedFile;
-use Moudarir\FileManager\Upload\UploadedFileCollection;
 
 final readonly class ImageWatermarker
 {
@@ -32,17 +33,14 @@ final readonly class ImageWatermarker
     /**
      * @throws FileManagerException
      */
-    public static function create(
-        UploadedFileCollection $uploadedFileCollection,
-        ImageWatermarkConfig $config,
-    ): void
+    public static function create(CollectionInterface $collection, ImageWatermarkConfig $config): void
     {
         ini_set('gd.jpeg_ignore_warning', 1);
 
         /**
          * @var UploadedFile $file
          */
-        foreach ($uploadedFileCollection as $file) {
+        foreach ($collection as $file) {
             if ($file->isImage() === false) {
                 continue;
             }

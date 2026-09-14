@@ -108,11 +108,7 @@ final class ValidateParam
         $customDate = $config['customDate'] ?? null;
         $dateFormat = $config['dateFormat'] ?? null;
 
-        if ($customDate !== null && $customDate instanceof DateTimeInterface === false) {
-            throw FileManagerException::generic(
-                "The `customDate` configuration must be null or an instance of DateTimeInterface."
-            );
-        }
+        self::customDate($customDate);
 
         if ($dateFormat !== null) {
             if (is_string($dateFormat) === false) {
@@ -131,6 +127,18 @@ final class ValidateParam
                     $exception
                 );
             }
+        }
+    }
+
+    /**
+     * @throws FileManagerException
+     */
+    public static function customDate(mixed $customDate = null): void
+    {
+        if ($customDate !== null && $customDate instanceof DateTimeInterface === false) {
+            throw FileManagerException::generic(
+                "The `customDate` configuration must be null or an instance of DateTimeInterface."
+            );
         }
     }
 }

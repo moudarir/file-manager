@@ -2,15 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Moudarir\FileManager;
+namespace Moudarir\FileManager\Config;
 
 use Moudarir\FileManager\Exceptions\FileManagerException;
 use Moudarir\FileManager\Helpers\Common;
-use Moudarir\FileManager\Image\ImageConvertConfig;
-use Moudarir\FileManager\Image\ImageCropConfig;
-use Moudarir\FileManager\Image\ImageResizeConfig;
-use Moudarir\FileManager\Image\ImageWatermarkConfig;
-use Moudarir\FileManager\Upload\UploadConfig;
 
 final class FileManagerConfig
 {
@@ -53,6 +48,8 @@ final class FileManagerConfig
     private ?ImageConvertConfig $imageConvertConfig = null;
 
     private ?ImageWatermarkConfig $imageWatermarkConfig = null;
+
+    private ?CollectionBuilderConfig $collectionBuilderConfig = null;
 
     private function __construct(private readonly array $config, private readonly array $providedConfig)
     {
@@ -151,6 +148,21 @@ final class FileManagerConfig
         }
 
         return $this->imageWatermarkConfig ??= ImageWatermarkConfig::create($this->config);
+    }
+
+    /**
+     * @throws FileManagerException
+     */
+    public function collectionBuilderConfig(): CollectionBuilderConfig
+    {
+        if (
+            is_string($this->config['field']) === false ||
+            trim($this->config['field']) === ''
+        ) {
+            throw FileManagerException::invalidParam('field');
+        }
+
+        return $this->collectionBuilderConfig ??= CollectionBuilderConfig::create($this->config);
     }
 
     public function getConfig(): array

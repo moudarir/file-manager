@@ -9,6 +9,8 @@ use Moudarir\File\Enum\MimeType;
 use Moudarir\File\Exceptions\FileResourceException;
 use Moudarir\File\Exceptions\MimeDetectionException;
 use Moudarir\File\File;
+use Moudarir\FileManager\Collections\UploadedFileCollection;
+use Moudarir\FileManager\Config\UploadConfig;
 use Moudarir\FileManager\Exceptions\FileManagerException;
 use Moudarir\FileManager\Helpers\Common;
 use Moudarir\Helpers\EncryptionHelper;

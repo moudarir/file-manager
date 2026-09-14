@@ -7,11 +7,11 @@ namespace Moudarir\FileManager\Tests\Unit\Image;
 use DateTimeImmutable;
 use Moudarir\File\Enum\MimeType;
 use Moudarir\File\File;
+use Moudarir\FileManager\Collections\UploadedFileCollection;
+use Moudarir\FileManager\Config\ImageCropConfig;
 use Moudarir\FileManager\Exceptions\FileManagerException;
-use Moudarir\FileManager\Image\ImageCropConfig;
 use Moudarir\FileManager\Image\ImageCropper;
 use Moudarir\FileManager\Upload\UploadedFile;
-use Moudarir\FileManager\Upload\UploadedFileCollection;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

@@ -183,9 +183,9 @@ When thumbnails are available, conversion can operate on those thumbnails. Other
 
 ```php
 use Moudarir\File\Enum\MimeType;
+use Moudarir\FileManager\Config\FileManagerConfig;
 use Moudarir\FileManager\Enums\WatermarkAlignment;
 use Moudarir\FileManager\FileManager;
-use Moudarir\FileManager\FileManagerConfig;
 
 $config = FileManagerConfig::create([
     // Upload
@@ -334,8 +334,8 @@ When conversion operates on thumbnails, the source thumbnails are the files affe
 Create a `FileManagerConfig` and use the fluent `FileManager` API:
 
 ```php
+use Moudarir\FileManager\Config\FileManagerConfig;
 use Moudarir\FileManager\FileManager;
-use Moudarir\FileManager\FileManagerConfig;
 
 $config = FileManagerConfig::create([
     'field' => 'file',
@@ -380,6 +380,62 @@ $files = (new FileManager($config))
     ->convert()
     ->files();
 ```
+
+### Build an Uploaded File Collection
+
+`buildUploadedFileCollection()` allows you to build an `UploadedFileCollection` from files that already exist on the filesystem, without calling `upload()`.
+
+This is useful when files have already been uploaded, and you want to apply image processing operations such as resizing, watermarking or conversion.
+
+```php
+$files = [
+    ['filepath' => '/path/to/picture.jpg'],
+    ['filepath' => '/path/to/picture2.jpg'],
+];
+
+$fileManagerConfig = FileManagerConfig::create([
+    'field' => 'file',
+    // other configuration params related to 'resize()' and 'convert()'
+]);
+
+$fileManager = new FileManager($fileManagerConfig)
+    ->buildUploadedFileCollection($files)
+    ->resize()
+    ->convert();
+
+$files = $fileManager->files();
+```
+
+Each file must provide a `filepath`. Additional information can optionally be provided:
+
+```php
+$files = [
+    [
+        'filepath' => '/path/to/picture.jpg',
+        'mimeType' => 'image/jpeg',
+        'createdAt' => new DateTimeImmutable('2026-01-15'),
+        'dimensions' => [
+            'width' => 1200,
+            'height' => 800,
+        ],
+    ],
+];
+```
+
+When `mimeType`, `createdAt` or `dimensions` are not provided, the file manager detects or generates the required information automatically.
+
+Invalid files can optionally be ignored by passing `true` as the second argument:
+
+```php
+$fileManager
+    ->buildUploadedFileCollection($files, ignoreInvalidFiles: true)
+    ->convert();
+
+$files = $fileManager->files();
+```
+
+The `buildUploadedFileCollection()` method can therefore be used independently of `upload()` when the files to process are already available on the filesystem.
+
 
 ## Features
 

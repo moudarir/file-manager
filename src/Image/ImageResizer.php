@@ -7,12 +7,13 @@ namespace Moudarir\FileManager\Image;
 use Moudarir\File\Exceptions\FileResourceException;
 use Moudarir\File\Exceptions\MimeDetectionException;
 use Moudarir\File\File;
+use Moudarir\FileManager\Collections\CollectionInterface;
 use Moudarir\FileManager\Collections\ThumbCollection;
+use Moudarir\FileManager\Config\ImageResizeConfig;
 use Moudarir\FileManager\Exceptions\FileManagerException;
 use Moudarir\FileManager\Helpers\CommandLineHelper;
 use Moudarir\FileManager\Helpers\Common;
 use Moudarir\FileManager\Upload\UploadedFile;
-use Moudarir\FileManager\Upload\UploadedFileCollection;
 
 final readonly class ImageResizer
 {
@@ -29,10 +30,7 @@ final readonly class ImageResizer
     /**
      * @throws FileManagerException
      */
-    public static function create(
-        UploadedFileCollection $uploadedFileCollection,
-        ImageResizeConfig $config,
-    ): void
+    public static function create(CollectionInterface $collection, ImageResizeConfig $config): void
     {
         $thumbs = $config->thumbs;
         $resizePath = $config->resizePath;
@@ -40,7 +38,7 @@ final readonly class ImageResizer
         /**
          * @var UploadedFile $file
          */
-        foreach ($uploadedFileCollection as $file) {
+        foreach ($collection as $file) {
             if ($file->isImage() === false) {
                 continue;
             }

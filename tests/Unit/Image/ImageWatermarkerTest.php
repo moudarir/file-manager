@@ -8,10 +8,10 @@ use DateTimeImmutable;
 use Moudarir\File\Enum\MimeType;
 use Moudarir\File\File;
 use Moudarir\FileManager\Collections\ThumbCollection;
-use Moudarir\FileManager\Image\ImageWatermarkConfig;
+use Moudarir\FileManager\Collections\UploadedFileCollection;
+use Moudarir\FileManager\Config\ImageWatermarkConfig;
 use Moudarir\FileManager\Image\ImageWatermarker;
 use Moudarir\FileManager\Upload\UploadedFile;
-use Moudarir\FileManager\Upload\UploadedFileCollection;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

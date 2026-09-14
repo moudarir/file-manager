@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Moudarir\FileManager\Image;
 
 use Moudarir\File\Enum\MimeType;
+use Moudarir\FileManager\Collections\CollectionInterface;
+use Moudarir\FileManager\Config\ImageConvertConfig;
 use Moudarir\FileManager\Exceptions\FileManagerException;
 use Moudarir\FileManager\Helpers\CommandLineHelper;
-use Moudarir\FileManager\Upload\UploadedFileCollection;
 
 final readonly class ImageConverter
 {
@@ -17,12 +18,9 @@ final readonly class ImageConverter
     /**
      * @throws FileManagerException
      */
-    public static function create(
-        UploadedFileCollection $uploadedFileCollection,
-        ImageConvertConfig $config,
-    ): void
+    public static function create(CollectionInterface $collection, ImageConvertConfig $config): void
     {
-        foreach ($uploadedFileCollection->all() as $file) {
+        foreach ($collection->all() as $file) {
             if ($file->isImage() === false) {
                 continue;
             }

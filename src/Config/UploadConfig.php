@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Moudarir\FileManager\Upload;
+namespace Moudarir\FileManager\Config;
 
 use DateTimeInterface;
 use Moudarir\File\Enum\MimeType;

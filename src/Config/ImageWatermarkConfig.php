@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Moudarir\FileManager\Image;
+namespace Moudarir\FileManager\Config;
 
 use Moudarir\FileManager\Enums\WatermarkAlignment;
 use Moudarir\FileManager\Exceptions\FileManagerException;

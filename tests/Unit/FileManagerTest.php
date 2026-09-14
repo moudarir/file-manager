@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Moudarir\FileManager\Tests\Unit;
 
 use Moudarir\File\Enum\MimeType;
+use Moudarir\FileManager\Config\FileManagerConfig;
 use Moudarir\FileManager\Enums\WatermarkAlignment;
 use Moudarir\FileManager\Exceptions\FileManagerException;
 use Moudarir\FileManager\FileManager;
-use Moudarir\FileManager\FileManagerConfig;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -483,6 +483,153 @@ final class FileManagerTest extends TestCase
         self::assertFileExists($medium->filepath());
         self::assertSame(200, $medium->imageWidth());
         self::assertSame(200, $medium->imageHeight());
+    }
+
+    #[Test]
+    public function itBuildsUploadedFileCollectionWithoutUpload(): void
+    {
+        $firstFilepath = $this->createJpeg('picture.jpg');
+        $secondFilepath = $this->createJpeg('picture2.jpg');
+
+        $config = FileManagerConfig::create([
+            'field' => 'file',
+        ]);
+
+        $fileManager = new FileManager($config);
+
+        $result = $fileManager->buildUploadedFileCollection([
+            ['filepath' => $firstFilepath],
+            ['filepath' => $secondFilepath],
+        ])->files();
+
+        self::assertCount(2, $result);
+
+        $files = $result->all();
+
+        self::assertSame($firstFilepath, $files[0]->filepath());
+        self::assertSame($secondFilepath, $files[1]->filepath());
+    }
+
+    #[Test]
+    public function itProcessesBuiltUploadedFileCollectionWithConvert(): void
+    {
+        $filepath = $this->createJpeg('picture.jpg');
+
+        $config = FileManagerConfig::create([
+            'field' => 'file',
+        ]);
+
+        $fileManager = new FileManager($config);
+
+        $result = $fileManager
+            ->buildUploadedFileCollection([
+                ['filepath' => $filepath],
+            ])
+            ->convert()
+            ->files();
+
+        $file = $result->first();
+
+        self::assertNotNull($file);
+        self::assertTrue($file->converted());
+        self::assertSame('webp', $file->extension());
+        self::assertSame(MimeType::WEBP, $file->mimeType());
+        self::assertFileExists($file->filepath());
+    }
+
+    #[Test]
+    public function itProcessesBuiltUploadedFileCollectionWithWatermark(): void
+    {
+        $filepath = $this->createJpeg('picture.jpg');
+        $watermarkFilepath = $this->createPng('watermark.png');
+
+        $config = FileManagerConfig::create([
+            'field' => 'file',
+            'watermarks' => [
+                'original' => [
+                    'overlayFilepath' => $watermarkFilepath,
+                ],
+            ],
+        ]);
+
+        $fileManager = new FileManager($config);
+
+        $result = $fileManager
+            ->buildUploadedFileCollection([
+                ['filepath' => $filepath],
+            ])
+            ->watermark()
+            ->files();
+
+        self::assertCount(1, $result);
+        self::assertSame($filepath, $result->first()?->filepath());
+        self::assertFileExists($filepath);
+    }
+
+    #[Test]
+    public function itProcessesBuiltUploadedFileCollectionWithResize(): void
+    {
+        $filepath = $this->createJpeg('picture.jpg');
+
+        $resizePath = $this->directory
+            .DIRECTORY_SEPARATOR
+            .'resized';
+
+        mkdir($resizePath, 0777, true);
+
+        $config = FileManagerConfig::create([
+            'field' => 'file',
+            'resizePath' => $resizePath,
+            'thumbs' => [
+                'large' => [
+                    'width' => 400,
+                    'height' => 300,
+                ],
+            ],
+        ]);
+
+        $fileManager = new FileManager($config);
+
+        $result = $fileManager
+            ->buildUploadedFileCollection([
+                ['filepath' => $filepath],
+            ])
+            ->resize()
+            ->files();
+
+        $file = $result->first();
+
+        self::assertNotNull($file);
+        self::assertNotNull($file->thumbCollection());
+        self::assertTrue($file->thumbCollection()?->has('large') ?? false);
+
+        $thumb = $file->thumbCollection()?->get('large');
+
+        self::assertNotNull($thumb);
+        self::assertFileExists($thumb->filepath());
+        self::assertSame(400, $thumb->imageWidth());
+        self::assertSame(300, $thumb->imageHeight());
+    }
+
+    #[Test]
+    public function itDoesNotRequireUploadWhenUploadedFileCollectionWasBuilt(): void
+    {
+        $filepath = $this->createJpeg('picture.jpg');
+
+        $config = FileManagerConfig::create([
+            'field' => 'file',
+        ]);
+
+        $fileManager = new FileManager($config);
+
+        $result = $fileManager
+            ->buildUploadedFileCollection([
+                ['filepath' => $filepath],
+            ])
+            ->files();
+
+        self::assertCount(1, $result);
+        self::assertSame($filepath, $result->first()?->filepath());
     }
 
     private function createFileManager(array $config = []): FileManager

@@ -8,9 +8,9 @@ use DateTimeImmutable;
 use DateTimeInterface;
 use Moudarir\File\Enum\MimeType;
 use Moudarir\File\File;
+use Moudarir\FileManager\Config\UploadConfig;
 use Moudarir\FileManager\Exceptions\FileManagerException;
 use Moudarir\FileManager\Upload\FileUploader;
-use Moudarir\FileManager\Upload\UploadConfig;
 use Moudarir\FileManager\Upload\UploadedFile;
 use PHPUnit\Framework\TestCase;
 

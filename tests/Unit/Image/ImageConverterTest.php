@@ -8,11 +8,11 @@ use DateTimeImmutable;
 use Moudarir\File\Enum\MimeType;
 use Moudarir\File\FileResource;
 use Moudarir\FileManager\Collections\ThumbCollection;
+use Moudarir\FileManager\Collections\UploadedFileCollection;
+use Moudarir\FileManager\Config\ImageConvertConfig;
 use Moudarir\FileManager\Exceptions\FileManagerException;
-use Moudarir\FileManager\Image\ImageConvertConfig;
 use Moudarir\FileManager\Image\ImageConverter;
 use Moudarir\FileManager\Upload\UploadedFile;
-use Moudarir\FileManager\Upload\UploadedFileCollection;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

@@ -5,18 +5,19 @@ declare(strict_types=1);
 namespace Moudarir\FileManager\Image;
 
 use Moudarir\File\Enum\MimeType;
+use Moudarir\FileManager\Collections\CollectionInterface;
+use Moudarir\FileManager\Config\ImageCropConfig;
 use Moudarir\FileManager\Exceptions\FileManagerException;
 use Moudarir\FileManager\Upload\UploadedFile;
-use Moudarir\FileManager\Upload\UploadedFileCollection;
 use Moudarir\Helpers\JsonHelper;
 
 final readonly class ImageCropper
 {
 
     private function __construct(
-        private UploadedFileCollection $uploadedFileCollection,
-        private ImageCropConfig        $config,
-        private array                  $cropConfig,
+        private CollectionInterface $collection,
+        private ImageCropConfig     $config,
+        private array               $cropConfig,
     ) {
     }
 
@@ -24,9 +25,9 @@ final readonly class ImageCropper
      * @throws FileManagerException
      */
     public static function create(
-        UploadedFileCollection $uploadedFileCollection,
-        ImageCropConfig $config,
-        string $croppingConfig,
+        CollectionInterface $collection,
+        ImageCropConfig     $config,
+        string              $croppingConfig,
     ): self
     {
         if (trim($croppingConfig) === '' || ($cropConfig = JsonHelper::decode($croppingConfig)) === null) {
@@ -34,7 +35,7 @@ final readonly class ImageCropper
         }
 
         return new self(
-            $uploadedFileCollection,
+            $collection,
             $config,
             $cropConfig,
         );
@@ -48,7 +49,7 @@ final readonly class ImageCropper
         /**
          * @var UploadedFile $file
          */
-        foreach ($this->uploadedFileCollection as $file) {
+        foreach ($this->collection as $file) {
             if ($file->isImage() === false) {
                 continue;
             }

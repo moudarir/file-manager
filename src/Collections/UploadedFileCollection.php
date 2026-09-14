@@ -2,19 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Moudarir\FileManager\Upload;
+namespace Moudarir\FileManager\Collections;
 
 use Countable;
 use IteratorAggregate;
+use Moudarir\FileManager\Upload\UploadedFile;
 use Traversable;
 
-final readonly class UploadedFileCollection implements Countable, IteratorAggregate
+final readonly class UploadedFileCollection implements Countable, IteratorAggregate, CollectionInterface
 {
 
     /**
      * @param UploadedFile[] $files
      */
-    public function __construct(private string $field, private array  $files)
+    public function __construct(private string $field, private array $files)
     {
     }
 
@@ -38,7 +39,11 @@ final readonly class UploadedFileCollection implements Countable, IteratorAggreg
 
     public function first(): ?UploadedFile
     {
-        return $this->files[0] ?? null;
+        if ($this->files === []) {
+            return null;
+        }
+
+        return $this->files[array_key_first($this->files)];
     }
 
     public function isEmpty(): bool

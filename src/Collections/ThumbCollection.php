@@ -10,7 +10,7 @@ use Moudarir\FileManager\Exceptions\FileManagerException;
 use Moudarir\FileManager\Upload\UploadedFile;
 use Traversable;
 
-final readonly class ThumbCollection implements Countable, IteratorAggregate
+final readonly class ThumbCollection implements Countable, IteratorAggregate, CollectionInterface
 {
 
     /**

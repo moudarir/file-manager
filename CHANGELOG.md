@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-09-15
+
+### Added
+
+* Add `CollectionInterface` as the common interface for file collections.
+* Add `CollectionBuilder` to build an `UploadedFileCollection` from existing files on the filesystem.
+* Add `FileManager::buildUploadedFileCollection()` to process existing files without requiring an upload.
+* Add support for optional file metadata when building an uploaded file collection:
+
+    * MIME type
+    * creation date
+    * image dimensions
+* Add silent mode to `buildUploadedFileCollection()` to ignore files that cannot be built.
+* Allow image processing modules to operate on collections built from existing files.
+* Add tests covering `CollectionBuilder` and `buildUploadedFileCollection()`.
+
+
 ## [1.2.0] - 2026-09-14
 
 Introduce `ThumbCollection` to represent the thumbnails generated from an `UploadedFile` and make it available to the image processing modules.
