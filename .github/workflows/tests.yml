@@ -55,7 +55,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: gd, fileinfo
+          extensions: gd, ctype, fileinfo, intl, mbstring, sodium, zip
           tools: composer:v2
           coverage: none
 
