@@ -1,0 +1,98 @@
+name: Tests
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    # Run monthly
+    - cron: "15 3 10 * *"
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    strategy:
+      fail-fast: true
+      matrix:
+        os:
+          - ubuntu-24.04
+          - windows-2025
+          - macos-26
+        php:
+          - "8.4"
+          - "8.5"
+
+    runs-on: ${{ matrix.os }}
+
+    name: PHP ${{ matrix.php }} on ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install ImageMagick on Ubuntu
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+      - name: Install ImageMagick on macOS
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install imagemagick
+
+      - name: Install ImageMagick on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install imagemagick -y --no-progress
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: gd
+          tools: composer:v2
+          coverage: none
+
+      - name: Verify ImageMagick
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            magick -version
+          else
+            if command -v magick >/dev/null 2>&1; then
+              magick -version
+            else
+              convert -version
+            fi
+          fi
+
+      - name: Verify ImageMagick WebP support
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            magick -version | grep -i "webp"
+          else
+            if command -v magick >/dev/null 2>&1; then
+              magick -version | grep -i "webp"
+            else
+              convert -version | grep -i "webp"
+            fi
+          fi
+
+      - name: Verify PHP extensions
+        run: php -m
+
+      - name: Validate Composer configuration
+        run: composer validate --strict
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Execute tests
+        run: composer test
