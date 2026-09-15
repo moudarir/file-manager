@@ -24,7 +24,7 @@ final class CommandLineHelper
     ): string
     {
         $executable = self::imageMagickExecutablePath();
-        $executableName = basename($executable);
+        $executableName = strtolower(pathinfo($executable, PATHINFO_FILENAME));
         $source = escapeshellarg($source);
 
         if ($executableName === 'magick') {
