@@ -1,5 +1,10 @@
 # Moudarir File Manager
 
+[![Tests](https://github.com/moudarir/file-manager/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/moudarir/file-manager/actions/workflows/tests.yml)
+[![Latest Stable Version](https://poser.pugx.org/moudarir/file-manager/v/stable)](https://packagist.org/packages/moudarir/file-manager)
+[![PHP Version Require](https://img.shields.io/packagist/dependency-v/moudarir/file-manager/php?color=%238892bf&style=flat-square)](https://packagist.org/packages/moudarir/file-manager)
+[![License](https://img.shields.io/packagist/l/moudarir/file-manager.svg?style=flat-square)](https://github.com/moudarir/file-manager/blob/main/LICENSE)
+
 A lightweight, dependency-free PHP file manager with image processing capabilities.
 
 ## Requirements

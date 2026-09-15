@@ -8,6 +8,7 @@ on:
   schedule:
     # Run monthly
     - cron: "15 3 10 * *"
+  workflow_dispatch:
 
 permissions:
   contents: read

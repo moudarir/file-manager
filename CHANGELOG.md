@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.1] - 2026-09-16
+
+### Fixed
+
+* Add support for ImageMagick `magick.exe` and `convert.exe` on Windows.
+* Fix ImageMagick conversion commands by removing unnecessary quotes from the quality argument.
+
+### Added
+
+* Add GitHub Actions CI for PHP 8.4 and 8.5 on Linux, Windows and macOS.
+* Add CI verification for ImageMagick and WebP support.
+* Add unit tests for `CommandLineHelper`.
+
+
 ## [1.3.0] - 2026-09-15
 
 ### Added
