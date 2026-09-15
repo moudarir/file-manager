@@ -95,7 +95,18 @@ final class CommandLineHelper
      */
     private static function imageMagickExecutablePath(): string
     {
-        return self::$imageMagickExecutablePath ??= self::executablePath('convert', 'magick');
+        if (self::$imageMagickExecutablePath !== null) {
+            return self::$imageMagickExecutablePath;
+        }
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            return self::$imageMagickExecutablePath = self::executablePath(
+                'magick.exe',
+                'convert.exe'
+            );
+        }
+
+        return self::$imageMagickExecutablePath = self::executablePath('convert', 'magick');
     }
 
     private static function nicePrefix(): string
