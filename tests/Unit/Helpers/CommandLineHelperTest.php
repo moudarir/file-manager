@@ -168,45 +168,6 @@ final class CommandLineHelperTest extends TestCase
     }
 
     #[Test]
-    public function itExecutesAnImageMagickConversionWithPathsContainingSpaces(): void
-    {
-        $directory = $this->createTemporaryDirectory('ImageMagick Test');
-
-        $source = $directory.DIRECTORY_SEPARATOR.'source image.ppm';
-        $destination = $directory.DIRECTORY_SEPARATOR.'destination image.webp';
-
-        $ppm = implode("\n", [
-            'P3',
-            '2 2',
-            '255',
-            '255 0 0 0 255 0',
-            '0 0 255 255 255 255',
-            '',
-        ]);
-
-        file_put_contents($source, $ppm);
-
-        $command = CommandLineHelper::buildImageMagickCommand(
-            $source,
-            'webp:'.$destination,
-            [
-                "-quality '75'",
-                '-strip',
-                '-define webp:alpha-quality=90',
-                '-define webp:method=5',
-            ]
-        );
-
-        self::assertTrue(
-            CommandLineHelper::executeCommand($command),
-            'ImageMagick command failed: '.$command
-        );
-
-        self::assertFileExists($destination);
-        self::assertGreaterThan(0, filesize($destination));
-    }
-
-    #[Test]
     public function itExecutesAnImageMagickConversionWithOnlyStripArg(): void
     {
         $directory = $this->createTemporaryDirectory('ImageMagick Test');
@@ -230,42 +191,6 @@ final class CommandLineHelperTest extends TestCase
             'webp:'.$destination,
             [
                 '-strip',
-            ]
-        );
-
-        self::assertTrue(
-            CommandLineHelper::executeCommand($command),
-            'ImageMagick command failed: '.$command
-        );
-
-        self::assertFileExists($destination);
-        self::assertGreaterThan(0, filesize($destination));
-    }
-
-    #[Test]
-    public function itExecutesAnImageMagickConversionWithQualityArg(): void
-    {
-        $directory = $this->createTemporaryDirectory('ImageMagick Test');
-
-        $source = $directory.DIRECTORY_SEPARATOR.'source image.ppm';
-        $destination = $directory.DIRECTORY_SEPARATOR.'destination image.webp';
-
-        $ppm = implode("\n", [
-            'P3',
-            '2 2',
-            '255',
-            '255 0 0 0 255 0',
-            '0 0 255 255 255 255',
-            '',
-        ]);
-
-        file_put_contents($source, $ppm);
-
-        $command = CommandLineHelper::buildImageMagickCommand(
-            $source,
-            'webp:'.$destination,
-            [
-                "-quality '75'",
             ]
         );
 

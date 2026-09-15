@@ -90,7 +90,7 @@ final readonly class ImageConverter
             $source,
             'webp:'.$destination,
             [
-                "-quality '75'",
+                "-quality 75",
                 '-strip',
                 '-define webp:alpha-quality=90',
                 '-define webp:method=5',
